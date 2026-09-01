@@ -2,7 +2,7 @@
   "run_id": "run-bedrock-google-gemma-3-12b-it",
   "assistant": "bedrock:google.gemma-3-12b-it",
   "started_at": "2026-08-12T21:24:46Z",
-  "dataset": "../fincom-bench/benchmark-open.csv",
+  "dataset": "../fincon-bench/benchmark-open.csv",
   "provider": "bedrock:google.gemma-3-12b-it",
   "judge": "bedrock:mistral.mistral-large-3-675b-instruct",
   "permissions": "none",

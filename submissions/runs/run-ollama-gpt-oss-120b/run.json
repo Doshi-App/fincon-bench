@@ -2,7 +2,7 @@
   "run_id": "run-ollama-gpt-oss-120b",
   "assistant": "ollama:gpt-oss:120b",
   "started_at": "2026-08-12T21:40:53Z",
-  "dataset": "../fincom-bench/benchmark-open.csv",
+  "dataset": "../fincon-bench/benchmark-open.csv",
   "provider": "ollama:gpt-oss:120b",
   "judge": "bedrock:mistral.mistral-large-3-675b-instruct",
   "permissions": "none",

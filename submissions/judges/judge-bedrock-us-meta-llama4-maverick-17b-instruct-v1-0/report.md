@@ -1,8 +1,8 @@
-# FinCom Bench run
+# FinCon Bench run
 
 - Run ID: `judge-bedrock-us-meta-llama4-maverick-17b-instruct-v1-0`
 - Started: 2026-08-12T20:31:07Z
-- Dataset: `../fincom-bench/meta-eval.csv`
+- Dataset: `../fincon-bench/meta-eval.csv`
 - Provider: `dataset`
 - Judge: `bedrock:us.meta.llama4-maverick-17b-instruct-v1:0`
 - Permissions applied: `from the dataset`

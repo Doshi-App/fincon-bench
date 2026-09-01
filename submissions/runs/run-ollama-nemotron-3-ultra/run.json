@@ -2,7 +2,7 @@
   "run_id": "run-ollama-nemotron-3-ultra",
   "assistant": "ollama:nemotron-3-ultra",
   "started_at": "2026-08-12T21:25:26Z",
-  "dataset": "../fincom-bench/benchmark-open.csv",
+  "dataset": "../fincon-bench/benchmark-open.csv",
   "provider": "ollama:nemotron-3-ultra",
   "judge": "bedrock:mistral.mistral-large-3-675b-instruct",
   "permissions": "none",

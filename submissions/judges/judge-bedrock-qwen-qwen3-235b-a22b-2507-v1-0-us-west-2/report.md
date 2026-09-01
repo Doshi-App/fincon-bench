@@ -1,8 +1,8 @@
-# FinCom Bench run
+# FinCon Bench run
 
 - Run ID: `judge-bedrock-qwen-qwen3-235b-a22b-2507-v1-0-us-west-2`
 - Started: 2026-08-12T20:30:23Z
-- Dataset: `../fincom-bench/meta-eval.csv`
+- Dataset: `../fincon-bench/meta-eval.csv`
 - Provider: `dataset`
 - Judge: `bedrock:qwen.qwen3-235b-a22b-2507-v1:0@us-west-2`
 - Permissions applied: `from the dataset`

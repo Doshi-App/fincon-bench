@@ -18,7 +18,7 @@ A security vulnerability is NOT a bug report. See SECURITY.md.
 
 - [ ] Harness (`harness/`)
 - [ ] Website (`app/`, `lib/`)
-- [ ] Rules or validator (`rules/`, `fincom_runner validate`)
+- [ ] Rules or validator (`rules/`, `fincon_runner validate`)
 - [ ] Documentation
 - [ ] Other:
 
@@ -54,5 +54,5 @@ The exact command you ran:
 ## Anything else
 
 <!-- Does `cd harness && pytest` pass on your machine? Does
-`python -m fincom_runner validate --dataset ../datasets/benchmark-open.csv`
+`python -m fincon_runner validate --dataset ../datasets/benchmark-open.csv`
 pass? Say so either way. -->

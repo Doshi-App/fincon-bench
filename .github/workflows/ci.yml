@@ -58,15 +58,15 @@ jobs:
       # problem, which fails this job.
       - name: Validate the open benchmark set
         working-directory: harness
-        run: python -m fincom_runner validate --dataset ../datasets/benchmark-open.csv
+        run: python -m fincon_runner validate --dataset ../datasets/benchmark-open.csv
 
       - name: Validate the holdout set
         working-directory: harness
-        run: python -m fincom_runner validate --dataset ../datasets/benchmark-holdout.csv
+        run: python -m fincon_runner validate --dataset ../datasets/benchmark-holdout.csv
 
       - name: Validate the meta-eval set
         working-directory: harness
-        run: python -m fincom_runner validate --dataset ../datasets/meta-eval.csv
+        run: python -m fincon_runner validate --dataset ../datasets/meta-eval.csv
 
   site-build:
     name: Site build

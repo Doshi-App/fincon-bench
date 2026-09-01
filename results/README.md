@@ -48,7 +48,7 @@ definition, so a reader does not have to reconstruct it from that section on eve
 
 ## What ran
 
-Both phases went through the existing runner (`harness/fincom_runner`). Two
+Both phases went through the existing runner (`harness/fincon_runner`). Two
 providers were added to it — `bedrock:` and `ollama:` — because neither the
 Anthropic nor the OpenAI key available had inference scope, so both providers
 were reached through AWS Bedrock and Ollama Cloud instead for this run. Later

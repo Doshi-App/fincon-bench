@@ -3,7 +3,7 @@
 Phase 1 needs 2 independent human labellers marking `datasets/meta-eval.csv`
 pass/fail, with disagreements resolved by discussion before the agreed label
 goes into `harness/pipeline/human-labels.csv` (see
-`docs/paper/fincom-bench-paper.md` §7.3). Today that file is edited by hand,
+`docs/paper/fincon-bench-paper.md` §7.3). Today that file is edited by hand,
 and only 1 labeller has been through it. This tool removes the CSV-editing
 friction from that step. It does not remove the step: it never writes a
 label itself, and it never reads a candidate judge's output while doing so.

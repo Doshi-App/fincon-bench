@@ -10,7 +10,7 @@
 # reply the free lane already produced.
 #
 # Each of these providers runs 1 pass per item by default (see
-# harness/fincom_runner/providers.py, REPEATED_PROVIDER_KINDS) — a paid
+# harness/fincon_runner/providers.py, REPEATED_PROVIDER_KINDS) — a paid
 # frontier call, unlike the 10 passes bedrock/ollama get, so this list should
 # stay short.
 #
@@ -53,7 +53,7 @@ for contestant in "${CONTESTANTS[@]}"; do
   fi
   (
     cd harness || exit 1
-    python3 -m fincom_runner run \
+    python3 -m fincon_runner run \
       --dataset "$DATASET" \
       --assistant "$contestant" \
       --provider "$contestant" \

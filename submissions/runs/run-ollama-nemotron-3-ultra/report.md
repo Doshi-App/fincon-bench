@@ -1,8 +1,8 @@
-# FinCom Bench run
+# FinCon Bench run
 
 - Run ID: `run-ollama-nemotron-3-ultra`
 - Started: 2026-08-12T21:25:26Z
-- Dataset: `../fincom-bench/benchmark-open.csv`
+- Dataset: `../fincon-bench/benchmark-open.csv`
 - Provider: `ollama:nemotron-3-ultra`
 - Judge: `bedrock:mistral.mistral-large-3-675b-instruct`
 - Permissions applied: `none`

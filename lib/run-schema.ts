@@ -2,7 +2,7 @@ import { z } from "zod";
 
 /**
  * A submission is a directory in submissions/, written by the harness
- * (harness/fincom_runner). The site reads run.json straight from that
+ * (harness/fincon_runner). The site reads run.json straight from that
  * directory — there is no hand-authored copy. This schema matches the real
  * shape already produced by the runner, not an idealised one.
  *

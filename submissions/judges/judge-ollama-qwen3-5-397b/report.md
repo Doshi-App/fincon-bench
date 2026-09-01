@@ -1,8 +1,8 @@
-# FinCom Bench run
+# FinCon Bench run
 
 - Run ID: `judge-ollama-qwen3-5-397b`
 - Started: 2026-08-12T20:32:09Z
-- Dataset: `../fincom-bench/meta-eval.csv`
+- Dataset: `../fincon-bench/meta-eval.csv`
 - Provider: `dataset`
 - Judge: `ollama:qwen3.5:397b`
 - Permissions applied: `from the dataset`

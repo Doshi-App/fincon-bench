@@ -1,8 +1,8 @@
-# FinCom Bench run
+# FinCon Bench run
 
 - Run ID: `run-ollama-gpt-oss-20b`
 - Started: 2026-08-13T07:11:31Z
-- Dataset: `../fincom-bench/benchmark-open.csv`
+- Dataset: `../fincon-bench/benchmark-open.csv`
 - Provider: `ollama:gpt-oss:20b`
 - Judge: `bedrock:mistral.mistral-large-3-675b-instruct`
 - Permissions applied: `none`

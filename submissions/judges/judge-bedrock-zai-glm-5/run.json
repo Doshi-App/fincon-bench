@@ -2,7 +2,7 @@
   "run_id": "judge-bedrock-zai-glm-5",
   "assistant": "hand-written-replies",
   "started_at": "2026-08-12T20:30:31Z",
-  "dataset": "../fincom-bench/meta-eval.csv",
+  "dataset": "../fincon-bench/meta-eval.csv",
   "provider": "dataset",
   "judge": "bedrock:zai.glm-5",
   "permissions": "from the dataset",

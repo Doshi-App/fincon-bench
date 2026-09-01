@@ -1,4 +1,4 @@
-# FinCom Bench.
+# FinCon Bench.
 #
 # `submissions/` is deliberately NOT ignored. It is the audit record behind
 # every leaderboard row, and a reader who wants to check a score needs the

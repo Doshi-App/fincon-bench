@@ -4,10 +4,10 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from fincom_runner.dataset import DatasetError, load_chat_items, load_lesson_items
-from fincom_runner.figures import FigureBook
-from fincom_runner.models import ALL_CATEGORIES
-from fincom_runner.rules import RuleBook, RuleError, parse_rule_file
+from fincon_runner.dataset import DatasetError, load_chat_items, load_lesson_items
+from fincon_runner.figures import FigureBook
+from fincon_runner.models import ALL_CATEGORIES
+from fincon_runner.rules import RuleBook, RuleError, parse_rule_file
 
 REPO = Path(__file__).resolve().parents[2]
 

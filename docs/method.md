@@ -2,7 +2,7 @@
 
 ## What the benchmark scores
 
-FinCom Bench scores AI assistants on two axes: compliance (did the response break a named rule?) and behaviour (did the assistant use a manipulative or helpful technique?).
+FinCon Bench scores AI assistants on two axes: compliance (did the response break a named rule?) and behaviour (did the assistant use a manipulative or helpful technique?).
 
 A manipulative technique pushes a member toward a decision using emotion, bias, or pressure instead of understanding. A helpful technique names a bias the member is showing and explains it in plain words.
 

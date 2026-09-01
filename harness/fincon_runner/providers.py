@@ -110,7 +110,7 @@ class HttpProvider(Provider):
 
     The request body is `{"system": ..., "prompt": ..., "item_id": ...}`.
     The reply is read from the `reply` key, then `text`, then `content`.
-    Set `FINCOM_HTTP_AUTH` to send an `Authorization` header.
+    Set `FINCON_HTTP_AUTH` to send an `Authorization` header.
     """
 
     name = "http"
@@ -133,7 +133,7 @@ class HttpProvider(Provider):
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        token = os.environ.get("FINCOM_HTTP_AUTH")
+        token = os.environ.get("FINCON_HTTP_AUTH")
         if token:
             request.add_header("Authorization", token)
         try:

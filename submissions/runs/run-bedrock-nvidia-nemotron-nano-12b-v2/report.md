@@ -1,8 +1,8 @@
-# FinCom Bench run
+# FinCon Bench run
 
 - Run ID: `run-bedrock-nvidia-nemotron-nano-12b-v2`
 - Started: 2026-08-12T21:23:56Z
-- Dataset: `../fincom-bench/benchmark-open.csv`
+- Dataset: `../fincon-bench/benchmark-open.csv`
 - Provider: `bedrock:nvidia.nemotron-nano-12b-v2`
 - Judge: `bedrock:mistral.mistral-large-3-675b-instruct`
 - Permissions applied: `none`

@@ -1,8 +1,8 @@
-# FinCom Bench run
+# FinCon Bench run
 
 - Run ID: `run-ollama-kimi-k2-6`
 - Started: 2026-08-13T06:59:32Z
-- Dataset: `../fincom-bench/benchmark-open.csv`
+- Dataset: `../fincon-bench/benchmark-open.csv`
 - Provider: `ollama:kimi-k2.6`
 - Judge: `bedrock:mistral.mistral-large-3-675b-instruct`
 - Permissions applied: `none`

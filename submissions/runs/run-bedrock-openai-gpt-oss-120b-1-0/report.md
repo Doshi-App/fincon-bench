@@ -1,8 +1,8 @@
-# FinCom Bench run
+# FinCon Bench run
 
 - Run ID: `run-bedrock-openai-gpt-oss-120b-1-0`
 - Started: 2026-08-12T21:19:03Z
-- Dataset: `../fincom-bench/benchmark-open.csv`
+- Dataset: `../fincon-bench/benchmark-open.csv`
 - Provider: `bedrock:openai.gpt-oss-120b-1:0`
 - Judge: `bedrock:mistral.mistral-large-3-675b-instruct`
 - Permissions applied: `none`

@@ -1,4 +1,4 @@
-# FinCom Bench run
+# FinCon Bench run
 
 - Run ID: `run-openai-gpt-5-4-mini`
 - Started: 2026-08-13T10:27:58Z

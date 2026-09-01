@@ -1,8 +1,8 @@
-# FinCom Bench run
+# FinCon Bench run
 
 - Run ID: `judge-bedrock-moonshotai-kimi-k2-5`
 - Started: 2026-08-12T20:30:34Z
-- Dataset: `../fincom-bench/meta-eval.csv`
+- Dataset: `../fincon-bench/meta-eval.csv`
 - Provider: `dataset`
 - Judge: `bedrock:moonshotai.kimi-k2.5`
 - Permissions applied: `from the dataset`

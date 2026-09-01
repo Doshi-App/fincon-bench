@@ -191,7 +191,7 @@ def main() -> int:
 
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-    from fincom_runner.models import ALL_CATEGORIES, axis_of  # noqa: PLC0415
+    from fincon_runner.models import ALL_CATEGORIES, axis_of  # noqa: PLC0415
 
     rows: list[dict] = []
     per_model: dict[str, list[dict]] = defaultdict(list)

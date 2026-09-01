@@ -2,7 +2,7 @@
   "run_id": "run-bedrock-us-anthropic-claude-haiku-4-5-20251001-v1-0",
   "assistant": "bedrock:us.anthropic.claude-haiku-4-5-20251001-v1:0",
   "started_at": "2026-08-12T21:04:47Z",
-  "dataset": "../fincom-bench/benchmark-open.csv",
+  "dataset": "../fincon-bench/benchmark-open.csv",
   "provider": "bedrock:us.anthropic.claude-haiku-4-5-20251001-v1:0",
   "judge": "bedrock:mistral.mistral-large-3-675b-instruct",
   "permissions": "none",

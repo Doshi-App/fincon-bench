@@ -10,8 +10,8 @@ const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"]
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
   title: {
-    default: "Fincon Bench",
-    template: "%s — Fincon Bench",
+    default: "FinCon Bench",
+    template: "%s — FinCon Bench",
   },
   description:
     "A public benchmark for financial compliance and behaviour in AI chat replies, graded against real conduct rules from the UK, the EU, the US and Australia.",

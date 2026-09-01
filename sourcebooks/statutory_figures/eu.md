@@ -1,6 +1,6 @@
 # European Union — Statutory figures
 
-This file replaces `figures/eu.yaml`. It holds 7 statutory figures the `expired_figure` gate checks a reply against. 2 are currently stale — a lesson somewhere cites a number the authority has since replaced, and `figure_gate()` in `harness/fincom_runner/gates.py` can fail a reply that repeats one. The other 5 are current, correct figures tracked so a future change can be caught — not figures that are wrong today.
+This file replaces `figures/eu.yaml`. It holds 7 statutory figures the `expired_figure` gate checks a reply against. 2 are currently stale — a lesson somewhere cites a number the authority has since replaced, and `figure_gate()` in `harness/fincon_runner/gates.py` can fail a reply that repeats one. The other 5 are current, correct figures tracked so a future change can be caught — not figures that are wrong today.
 
 This list comes from a review of which figures the lesson library cites and which of those expire. Member state matters here, and each figure has a different national authority. Values verified against the publishing authority on 2026-08-01.
 
@@ -83,7 +83,7 @@ The EU-wide minimum deposit guarantee is 100,000 euros. Unchanged by the 2026 CM
 
 ---
 
-Machine-readable data below. `harness/fincom_runner/figures.py` reads this block; the prose above is for a human reader and is not parsed.
+Machine-readable data below. `harness/fincon_runner/figures.py` reads this block; the prose above is for a human reader and is not parsed.
 
 ```yaml
 entries:

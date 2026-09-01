@@ -22,7 +22,7 @@ See CONTRIBUTING.md for the full process.
 Every pull request:
 
 - [ ] `cd harness && pip install -r requirements.txt -r requirements-dev.txt && pytest` passes locally.
-- [ ] `python -m fincom_runner validate --dataset <path>` passes for every dataset this touches, run from `harness/`. It reports no problem.
+- [ ] `python -m fincon_runner validate --dataset <path>` passes for every dataset this touches, run from `harness/`. It reports no problem.
 - [ ] `npm run lint` and `npm run build` pass, if this changes the website.
 
 If this is a rule change:

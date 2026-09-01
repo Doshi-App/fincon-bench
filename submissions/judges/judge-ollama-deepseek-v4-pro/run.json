@@ -2,7 +2,7 @@
   "run_id": "judge-ollama-deepseek-v4-pro",
   "assistant": "hand-written-replies",
   "started_at": "2026-08-12T20:32:05Z",
-  "dataset": "../fincom-bench/meta-eval.csv",
+  "dataset": "../fincon-bench/meta-eval.csv",
   "provider": "dataset",
   "judge": "ollama:deepseek-v4-pro",
   "permissions": "from the dataset",

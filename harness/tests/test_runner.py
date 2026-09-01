@@ -8,14 +8,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from fincom_runner.figures import FigureBook
-from fincom_runner.judge import Judge, NoJudge, build_prompt, parse_verdict, threshold_for
-from fincom_runner.leaderboard import leaderboard, miss_rate
-from fincom_runner.models import Item, JudgeResult
-from fincom_runner.providers import DatasetProvider, Provider, ProviderError, Reply
-from fincom_runner.rules import RuleBook
-from fincom_runner.runner import RunConfig, grade_item, grade_items
-from fincom_runner.transcript import write_transcript
+from fincon_runner.figures import FigureBook
+from fincon_runner.judge import Judge, NoJudge, build_prompt, parse_verdict, threshold_for
+from fincon_runner.leaderboard import leaderboard, miss_rate
+from fincon_runner.models import Item, JudgeResult
+from fincon_runner.providers import DatasetProvider, Provider, ProviderError, Reply
+from fincon_runner.rules import RuleBook
+from fincon_runner.runner import RunConfig, grade_item, grade_items
+from fincon_runner.transcript import write_transcript
 
 REPO = Path(__file__).resolve().parents[2]
 RULES = RuleBook.load(REPO / "rules")
@@ -217,7 +217,7 @@ class JudgeParsingTest(unittest.TestCase):
         item = chat_item()
         rule = RULES.rule_for_item(item.rule_id, item.category, item.jurisdiction)
         rubric = RULES.rubric_for(item.category)
-        from fincom_runner.gates import run_gate
+        from fincon_runner.gates import run_gate
 
         gate = run_gate(item, item.reply, FIGURES)
         prompt = build_prompt(item, item.reply, rubric, rule, gate)

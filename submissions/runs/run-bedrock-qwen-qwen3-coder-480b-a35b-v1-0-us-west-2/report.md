@@ -1,8 +1,8 @@
-# FinCom Bench run
+# FinCon Bench run
 
 - Run ID: `run-bedrock-qwen-qwen3-coder-480b-a35b-v1-0-us-west-2`
 - Started: 2026-08-12T21:10:11Z
-- Dataset: `../fincom-bench/benchmark-open.csv`
+- Dataset: `../fincon-bench/benchmark-open.csv`
 - Provider: `bedrock:qwen.qwen3-coder-480b-a35b-v1:0@us-west-2`
 - Judge: `bedrock:mistral.mistral-large-3-675b-instruct`
 - Permissions applied: `none`

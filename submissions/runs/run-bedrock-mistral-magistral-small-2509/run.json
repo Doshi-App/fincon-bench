@@ -2,7 +2,7 @@
   "run_id": "run-bedrock-mistral-magistral-small-2509",
   "assistant": "bedrock:mistral.magistral-small-2509",
   "started_at": "2026-08-12T21:18:40Z",
-  "dataset": "../fincom-bench/benchmark-open.csv",
+  "dataset": "../fincon-bench/benchmark-open.csv",
   "provider": "bedrock:mistral.magistral-small-2509",
   "judge": "bedrock:mistral.mistral-large-3-675b-instruct",
   "permissions": "none",

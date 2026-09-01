@@ -2,7 +2,7 @@
 
 ## Report a vulnerability
 
-Open a private GitHub security advisory on [`Doshi-App/fincom-bench`](https://github.com/Doshi-App/fincom-bench):
+Open a private GitHub security advisory on [`Doshi-App/fincon-bench`](https://github.com/Doshi-App/fincon-bench):
 
 1. Go to the **Security** tab.
 2. Select **Report a vulnerability**.

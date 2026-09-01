@@ -2,7 +2,7 @@
   "run_id": "run-bedrock-mistral-mistral-large-3-675b-instruct",
   "assistant": "bedrock:mistral.mistral-large-3-675b-instruct",
   "started_at": "2026-08-12T21:16:22Z",
-  "dataset": "../fincom-bench/benchmark-open.csv",
+  "dataset": "../fincon-bench/benchmark-open.csv",
   "provider": "bedrock:mistral.mistral-large-3-675b-instruct",
   "judge": "bedrock:mistral.mistral-large-3-675b-instruct",
   "permissions": "none",

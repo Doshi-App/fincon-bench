@@ -2,7 +2,7 @@
   "run_id": "run-ollama-kimi-k2-7-code",
   "assistant": "ollama:kimi-k2.7-code",
   "started_at": "2026-08-13T06:57:20Z",
-  "dataset": "../fincom-bench/benchmark-open.csv",
+  "dataset": "../fincon-bench/benchmark-open.csv",
   "provider": "ollama:kimi-k2.7-code",
   "judge": "bedrock:mistral.mistral-large-3-675b-instruct",
   "permissions": "none",

@@ -2,9 +2,9 @@
 
 import unittest
 
-from fincom_runner.figures import FigureBook
-from fincom_runner.gates import figure_gate, run_gate, source_gate
-from fincom_runner.models import Authority, Figure, Item
+from fincon_runner.figures import FigureBook
+from fincon_runner.gates import figure_gate, run_gate, source_gate
+from fincon_runner.models import Authority, Figure, Item
 
 FSCS = Figure(
     figure_id="uk-figure-deposit-protection",

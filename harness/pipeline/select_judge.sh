@@ -42,7 +42,7 @@ for candidate in "${CANDIDATES[@]}"; do
   name="judge-$(slug "$candidate")"
   (
     cd harness || exit 1
-    python3 -m fincom_runner run \
+    python3 -m fincon_runner run \
       --dataset ../datasets/meta-eval.csv \
       --assistant "hand-written-replies" \
       --provider dataset \

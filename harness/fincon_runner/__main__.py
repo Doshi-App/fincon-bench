@@ -1,4 +1,4 @@
-"""Entry point: `python -m fincom_runner`."""
+"""Entry point: `python -m fincon_runner`."""
 
 import sys
 

@@ -2,7 +2,7 @@
   "run_id": "run-ollama-glm-5-2",
   "assistant": "ollama:glm-5.2",
   "started_at": "2026-08-12T21:27:29Z",
-  "dataset": "../fincom-bench/benchmark-open.csv",
+  "dataset": "../fincon-bench/benchmark-open.csv",
   "provider": "ollama:glm-5.2",
   "judge": "bedrock:mistral.mistral-large-3-675b-instruct",
   "permissions": "none",

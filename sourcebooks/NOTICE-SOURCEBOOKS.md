@@ -133,5 +133,5 @@ the FCA/FINRA rows above until a lawyer confirms otherwise.
    `clause_text` structure, including 19 FCA Handbook citations and 4
    FINRA ones. Those were outside this pass's scope and are **not** yet
    stripped. `clause_text` there is parsed into the model but never reaches the
-   judge prompt (`harness/fincom_runner/judge.py` uses only source, clause and
+   judge prompt (`harness/fincon_runner/judge.py` uses only source, clause and
    URL), so stripping them would not change any published result.

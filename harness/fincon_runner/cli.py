@@ -373,8 +373,8 @@ def cmd_missrate(args) -> int:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="fincom_runner",
-        description="The FinCom Bench runner: read the rules, execute the tests, write a transcript.",
+        prog="fincon_runner",
+        description="The FinCon Bench runner: read the rules, execute the tests, write a transcript.",
     )
     parser.add_argument(
         "--repo",

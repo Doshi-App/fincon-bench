@@ -4,8 +4,8 @@ import json
 import unittest
 from pathlib import Path
 
-from fincom_runner.dataset import load_chat_items
-from fincom_runner.prompts import (
+from fincon_runner.dataset import load_chat_items
+from fincon_runner.prompts import (
     JURISDICTIONS,
     VARIANTS,
     PromptError,

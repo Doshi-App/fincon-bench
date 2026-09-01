@@ -1,8 +1,8 @@
-# FinCom Bench run
+# FinCon Bench run
 
 - Run ID: `judge-ollama-nemotron-3-ultra`
 - Started: 2026-08-12T20:32:12Z
-- Dataset: `../fincom-bench/meta-eval.csv`
+- Dataset: `../fincon-bench/meta-eval.csv`
 - Provider: `dataset`
 - Judge: `ollama:nemotron-3-ultra`
 - Permissions applied: `from the dataset`

@@ -17,7 +17,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from fincom_runner.endpoints import EndpointError, bedrock_chat, ollama_chat  # noqa: E402
+from fincon_runner.endpoints import EndpointError, bedrock_chat, ollama_chat  # noqa: E402
 
 PROBE = "Reply with exactly one word: ready"
 

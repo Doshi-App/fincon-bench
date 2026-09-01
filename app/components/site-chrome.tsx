@@ -53,7 +53,7 @@ function Wordmark() {
           d="M24.4649 49.0372C37.7402 49.0372 48.502 38.2754 48.502 25C48.502 11.7247 37.7402 0.962891 24.4649 0.962891C11.1895 0.962891 0.427734 11.7247 0.427734 25C0.427734 38.2754 11.1895 49.0372 24.4649 49.0372ZM13.561 28.5122L16.0996 25.9735C16.6381 25.4351 16.6405 24.5629 16.107 24.0196L13.4611 21.3347C11.3902 19.2638 11.4268 15.8798 13.5756 13.8576C15.6514 11.9012 18.9623 12.1059 20.9796 14.1232L23.5085 16.6545C24.0494 17.1954 24.9289 17.1954 25.4698 16.6545L28.1571 13.9697C30.2279 11.8988 33.612 11.9353 35.6342 14.0842C37.5905 16.1599 37.3859 19.4709 35.3686 21.4882L32.8299 24.0269C32.2915 24.5653 32.2866 25.4375 32.8226 25.9808L35.4685 28.6656C37.5394 30.7365 37.5028 34.1206 35.354 36.1428C33.2782 38.0991 29.9673 37.8945 27.95 35.8772L25.4186 33.3458C24.8778 32.805 23.9982 32.805 23.4574 33.3458L20.7725 36.0307C18.7017 38.1016 15.3176 38.065 13.2954 35.9162C11.3391 33.8404 11.5437 30.5294 13.561 28.5122Z"
         />
       </svg>
-      <span className="font-semibold tracking-tight text-fg">Fincon Bench</span>
+      <span className="font-semibold tracking-tight text-fg">FinCon Bench</span>
     </Link>
   );
 }
@@ -90,7 +90,7 @@ export function Footer() {
       <div className="mx-auto max-w-7xl px-6 py-10">
         <div className="flex flex-col gap-8 sm:flex-row sm:justify-between">
           <div className="max-w-sm">
-            <p className="text-sm font-semibold text-fg">Fincon Bench</p>
+            <p className="text-sm font-semibold text-fg">FinCon Bench</p>
             <p className="mt-2 text-sm leading-relaxed text-muted">
               A public benchmark for financial compliance and behaviour in AI chat replies, graded
               against real conduct rules from the UK, the EU, the US and Australia.

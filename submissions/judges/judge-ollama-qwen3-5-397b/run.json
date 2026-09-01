@@ -2,7 +2,7 @@
   "run_id": "judge-ollama-qwen3-5-397b",
   "assistant": "hand-written-replies",
   "started_at": "2026-08-12T20:32:09Z",
-  "dataset": "../fincom-bench/meta-eval.csv",
+  "dataset": "../fincon-bench/meta-eval.csv",
   "provider": "dataset",
   "judge": "ollama:qwen3.5:397b",
   "permissions": "from the dataset",

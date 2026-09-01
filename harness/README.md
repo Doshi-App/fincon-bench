@@ -10,11 +10,11 @@ cd harness
 pip install -r requirements.txt
 
 # 1. Check the rules and a dataset. No model, no network, no key.
-python -m fincom_runner validate --dataset ../datasets/benchmark-open.csv
+python -m fincon_runner validate --dataset ../datasets/benchmark-open.csv
 
 # 2. Grade the replies the meta-eval set already holds, with the
 #    deterministic gate only.
-python -m fincom_runner run \
+python -m fincon_runner run \
   --dataset ../datasets/meta-eval.csv \
   --assistant hand-written-replies \
   --provider dataset \
@@ -65,10 +65,10 @@ Install the API packages only when you need them:
 pip install -r requirements-providers.txt
 ```
 
-`bedrock` and `ollama` need no package — `fincom_runner/endpoints.py` speaks
+`bedrock` and `ollama` need no package — `fincon_runner/endpoints.py` speaks
 to both hosts with a plain HTTP POST.
 
-Set `FINCOM_HTTP_AUTH` to send an `Authorization` header with the `http`
+Set `FINCON_HTTP_AUTH` to send an `Authorization` header with the `http`
 provider. No key is ever written to a transcript.
 
 ## Repeats — how many times an item runs
@@ -97,7 +97,7 @@ that would otherwise run once:
 
 ```bash
 # Force 3 passes on a paid key, to sanity-check the repeat mechanism cheaply.
-python -m fincom_runner run \
+python -m fincon_runner run \
   --dataset ../datasets/benchmark-open.csv \
   --assistant anthropic-check \
   --provider anthropic:claude-opus-4 \
@@ -106,7 +106,7 @@ python -m fincom_runner run \
   --out ../submissions
 
 # Run Ollama Cloud once instead of 10 times, for a quick smoke test.
-python -m fincom_runner run \
+python -m fincon_runner run \
   --dataset ../datasets/benchmark-open.csv \
   --assistant ollama-smoke-test \
   --provider ollama:qwen3.5:397b \
@@ -152,7 +152,7 @@ op run --env-file=secrets.op.env --no-masking -- \
 
 One implementation note: models from the GPT-5.x line reject the
 `chat.completions` `max_tokens` parameter and require `max_completion_tokens`
-instead. `OpenAiProvider` in `fincom_runner/providers.py` sends
+instead. `OpenAiProvider` in `fincon_runner/providers.py` sends
 `max_completion_tokens` for this reason — older models (GPT-4o and earlier)
 accept it too, so 1 parameter name covers the whole `openai:` provider.
 
@@ -246,17 +246,17 @@ The finding record follows the shape in `docs/method.md`.
 
 ```bash
 # Rebuild the leaderboard from one or more transcripts.
-python -m fincom_runner leaderboard ../submissions/*/transcript.jsonl
+python -m fincon_runner leaderboard ../submissions/*/transcript.jsonl
 
 # Score a run against the corrections people filed by hand.
-python -m fincom_runner missrate ../submissions/<run-id>/transcript.jsonl \
+python -m fincon_runner missrate ../submissions/<run-id>/transcript.jsonl \
   --corrections corrections.csv
 
 # Rebuild the system_prompt column of a dataset from the prompt builder in
-# fincom_runner/prompts.py. The rebuild changes the prompt only — a reply
+# fincon_runner/prompts.py. The rebuild changes the prompt only — a reply
 # collected under an older prompt stays, so regenerate replies after a
 # rebuild and before anyone labels them.
-python -m fincom_runner prompts ../datasets/benchmark-open.csv
+python -m fincon_runner prompts ../datasets/benchmark-open.csv
 ```
 
 The corrections file is a CSV with a `category` column and at least one of
@@ -277,7 +277,7 @@ axis covers — the 7 compliance categories plus exploiting bias, manipulating
 emotion and inappropriate urgency.
 
 ```bash
-python -m fincom_runner run \
+python -m fincon_runner run \
   --dataset examples/lesson-sample.jsonl \
   --assistant doshi-lesson-library \
   --provider dataset \

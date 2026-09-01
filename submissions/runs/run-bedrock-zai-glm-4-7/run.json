@@ -2,7 +2,7 @@
   "run_id": "run-bedrock-zai-glm-4-7",
   "assistant": "bedrock:zai.glm-4.7",
   "started_at": "2026-08-12T21:14:00Z",
-  "dataset": "../fincom-bench/benchmark-open.csv",
+  "dataset": "../fincon-bench/benchmark-open.csv",
   "provider": "bedrock:zai.glm-4.7",
   "judge": "bedrock:mistral.mistral-large-3-675b-instruct",
   "permissions": "none",

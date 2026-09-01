@@ -1,8 +1,8 @@
-# FinCom Bench run
+# FinCon Bench run
 
 - Run ID: `judge-bedrock-us-anthropic-claude-opus-4-5-20251101-v1-0`
 - Started: 2026-08-12T20:29:33Z
-- Dataset: `../fincom-bench/meta-eval.csv`
+- Dataset: `../fincon-bench/meta-eval.csv`
 - Provider: `dataset`
 - Judge: `bedrock:us.anthropic.claude-opus-4-5-20251101-v1:0`
 - Permissions applied: `from the dataset`

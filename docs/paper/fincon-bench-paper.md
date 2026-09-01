@@ -1,8 +1,8 @@
-# FinCom Bench: grading consumer-facing financial assistants against named conduct clauses in four jurisdictions
+# FinCon Bench: grading consumer-facing financial assistants against named conduct clauses in four jurisdictions
 
 **Version v1 — 6 August 2026. Method complete. Results not yet reported.**
 
-Authors: the FinCom Bench team, Doshi.
+Authors: the FinCon Bench team, Doshi.
 
 ---
 
@@ -22,7 +22,7 @@ The authors sell a product that will appear on this benchmark's leaderboard. Sec
 
 ### 1.1 The task
 
-An artificial-intelligence assistant inside a bank's own app answers a member's question about money. The reply is either lawful or it is not. FinCom Bench grades that reply against named clauses of financial conduct law in four jurisdictions: the United Kingdom, the European Union, the United States and Australia.
+An artificial-intelligence assistant inside a bank's own app answers a member's question about money. The reply is either lawful or it is not. FinCon Bench grades that reply against named clauses of financial conduct law in four jurisdictions: the United Kingdom, the European Union, the United States and Australia.
 
 The benchmark holds 274 probes. Each probe is a realistic first-turn member message. Each probe carries one finding category, one jurisdiction, and one rule identifier that points at a clause. An assistant under test writes its own reply to each probe. A judge model grades each reply against that clause's rubric. The output is a pass or a fail per probe, aggregated into a leaderboard.
 
@@ -38,7 +38,7 @@ Three gaps, each confirmed by reading the artifacts rather than the papers about
 
 **No leaderboard grades behavioural technique.** We checked the live public leaderboards — the Open LLM Leaderboard, Artificial Analysis, llm-stats.com, LLM-Perf. All grade capability, speed and price. CogBench has no leaderboard page, no score table and no submission process. OptimismBench released items for per-model auditing and no leaderboard. This is a confirmed negative, and it is the reason the behaviour axis in section 3.3 has no prior art to copy.
 
-The closest structural analogue in any domain is HealthBench: expert-written rubric criteria, grouped into axes, applied by a model grader, validated against the experts by macro F1. FinCom Bench copies that shape, including the existence of a dedicated section on whether the model grader can be trusted.
+The closest structural analogue in any domain is HealthBench: expert-written rubric criteria, grouped into axes, applied by a model grader, validated against the experts by macro F1. FinCon Bench copies that shape, including the existence of a dedicated section on whether the model grader can be trusted.
 
 ### 1.3 The finding that makes this benchmark different
 
@@ -78,7 +78,7 @@ It does not contribute results. Section 8 is empty by design in v1.
 
 Two SWE-Bench policies matter to a vendor-authored benchmark. A technical report is a submission gate — "if you do not provide a technical report, or the report is not of sufficient quality, we will not accept your submission." And in November 2025 the Verified and Multilingual splits were restricted to academic submissions with an arXiv preprint, naming three commercial submitters as no longer eligible. That is a leaderboard excluding vendors outright. We expect the norm to be applied to us, and section 9.1 says what we can and cannot offer against it.
 
-SWE-Bench's other transferable idea is that the expected verdict is mechanical: `FAIL_TO_PASS` and `PASS_TO_PASS` are arrays of test identifiers that must flip and must hold. The item cannot drift, because the verdict is not prose. FinCom Bench has no equivalent for a conduct judgement, and section 6.2 explains what we do instead.
+SWE-Bench's other transferable idea is that the expected verdict is mechanical: `FAIL_TO_PASS` and `PASS_TO_PASS` are arrays of test identifiers that must flip and must hold. The item cannot drift, because the verdict is not prose. FinCon Bench has no equivalent for a conduct judgement, and section 6.2 explains what we do instead.
 
 **HumanEval** and **FinanceBench** keep their data in the code repository; both sets are small and frozen. **MMLU** ships four scripts and a tar download. **HELM** keeps scenario code and a frontend in the repository and no items. The pattern across all five is that the rule set and the graded items are different artifacts with different review cadences.
 
@@ -92,9 +92,9 @@ Three suites already solve a version of this problem, so the design question is 
 - **LiveBench** replaces about one sixth of its questions each month and refreshes fully about every six months.
 - **SWE-Bench-Live** adds 50 newly verified issues per month while explicitly freezing its lite and verified splits, stating that this ensures fair leaderboard comparisons and keeps evaluation costs manageable.
 
-FinCom Bench copies the third pattern and the errata convention. Section 6.5 sets out the figures trigger.
+FinCon Bench copies the third pattern and the errata convention. Section 6.5 sets out the figures trigger.
 
-We could not find a rolling benchmark in any regulated domain. All three suites above are coding or general reasoning. If that negative holds, FinCom Bench is the first rolling benchmark whose items expire by operation of law rather than by contamination.
+We could not find a rolling benchmark in any regulated domain. All three suites above are coding or general reasoning. If that negative holds, FinCon Bench is the first rolling benchmark whose items expire by operation of law rather than by contamination.
 
 ### 2.3 Judge-model validation
 
@@ -402,7 +402,7 @@ Where a check can be settled mechanically, it is. A word list settles COBS 4.2.5
 
 Where the check needs judgement, a deterministic trigger opens the judgement rather than replacing it. The trigger fires on a pattern — a named instrument, a return figure, a loss-framing phrase — and the judge then decides whether the reply crosses the clause.
 
-This matters because of what SWE-Bench has and FinCom Bench does not. A SWE-Bench verdict is a named test flipping from fail to pass; the item cannot drift because the verdict is not prose. There is no equivalent for "does this sentence carry an evaluative opinion about a particular investment". The deterministic gate is the closest available substitute, and it does two useful things: it stops a judge inventing a finding on a reply that contains no trigger at all, and it makes the trigger itself reviewable in a pull request.
+This matters because of what SWE-Bench has and FinCon Bench does not. A SWE-Bench verdict is a named test flipping from fail to pass; the item cannot drift because the verdict is not prose. There is no equivalent for "does this sentence carry an evaluative opinion about a particular investment". The deterministic gate is the closest available substitute, and it does two useful things: it stops a judge inventing a finding on a reply that contains no trigger at all, and it makes the trigger itself reviewable in a pull request.
 
 ### 6.3 What a finding record holds
 
@@ -456,7 +456,7 @@ The scored splits stay frozen while a live split rolls alongside them, following
 
 ### 7.1 Why this section is not optional
 
-Part of the grader is a judge model. A benchmark whose grader is a model, and which does not report how often that grader agrees with a human expert, is asking to be taken on faith. HealthBench devotes a whole numbered section to this and FinCom Bench copies that, including the ordering — the validation section comes before the results, not after.
+Part of the grader is a judge model. A benchmark whose grader is a model, and which does not report how often that grader agrees with a human expert, is asking to be taken on faith. HealthBench devotes a whole numbered section to this and FinCon Bench copies that, including the ordering — the validation section comes before the results, not after.
 
 ### 7.2 The statistic and why it is macro F1
 
@@ -493,7 +493,7 @@ The human labels are never published. A candidate judge cannot read them before 
 
 Our per-category sample will be small, and we would rather state the number now than have it noticed later.
 
-HealthBench reports 60,896 meta-examples, averaging 1,791 per criterion, with a minimum of 1,072. FinCom Bench has 274 items across 15 categories — between 14 and 36 rows per category. That is two orders of magnitude smaller.
+HealthBench reports 60,896 meta-examples, averaging 1,791 per criterion, with a minimum of 1,072. FinCon Bench has 274 items across 15 categories — between 14 and 36 rows per category. That is two orders of magnitude smaller.
 
 The consequence is specific: a macro F1 computed on 14 rows has a confidence interval wide enough to swallow the difference between two candidate judges. Version v2 will report the interval alongside the point estimate and will not claim a winner where the intervals overlap. If they all overlap, the honest finding is that this set cannot distinguish these five judges, and the fix is more labelled rows rather than a firmer-sounding sentence.
 

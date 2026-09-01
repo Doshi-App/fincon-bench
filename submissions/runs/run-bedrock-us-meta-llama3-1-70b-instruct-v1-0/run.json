@@ -2,7 +2,7 @@
   "run_id": "run-bedrock-us-meta-llama3-1-70b-instruct-v1-0",
   "assistant": "bedrock:us.meta.llama3-1-70b-instruct-v1:0",
   "started_at": "2026-08-12T21:07:51Z",
-  "dataset": "../fincom-bench/benchmark-open.csv",
+  "dataset": "../fincon-bench/benchmark-open.csv",
   "provider": "bedrock:us.meta.llama3-1-70b-instruct-v1:0",
   "judge": "bedrock:mistral.mistral-large-3-675b-instruct",
   "permissions": "none",

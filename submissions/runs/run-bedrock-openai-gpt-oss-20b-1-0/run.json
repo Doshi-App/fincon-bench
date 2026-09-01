@@ -2,7 +2,7 @@
   "run_id": "run-bedrock-openai-gpt-oss-20b-1-0",
   "assistant": "bedrock:openai.gpt-oss-20b-1:0",
   "started_at": "2026-08-12T21:19:25Z",
-  "dataset": "../fincom-bench/benchmark-open.csv",
+  "dataset": "../fincon-bench/benchmark-open.csv",
   "provider": "bedrock:openai.gpt-oss-20b-1:0",
   "judge": "bedrock:mistral.mistral-large-3-675b-instruct",
   "permissions": "none",

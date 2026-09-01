@@ -37,7 +37,7 @@ for contestant in "${CONTESTANTS[@]}"; do
   [ -f "submissions/runs/${name}/transcript.jsonl" ] && { echo "skip $contestant (done)" >>logs/score-contestants.log; continue; }
   (
     cd harness || exit 1
-    python3 -m fincom_runner run \
+    python3 -m fincon_runner run \
       --dataset "$DATASET" \
       --assistant "$contestant" \
       --provider "$contestant" \

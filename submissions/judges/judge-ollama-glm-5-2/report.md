@@ -1,8 +1,8 @@
-# FinCom Bench run
+# FinCon Bench run
 
 - Run ID: `judge-ollama-glm-5-2`
 - Started: 2026-08-12T20:35:32Z
-- Dataset: `../fincom-bench/meta-eval.csv`
+- Dataset: `../fincon-bench/meta-eval.csv`
 - Provider: `dataset`
 - Judge: `ollama:glm-5.2`
 - Permissions applied: `from the dataset`

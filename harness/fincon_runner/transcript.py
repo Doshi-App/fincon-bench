@@ -74,7 +74,7 @@ def _sort_key(item: GradedItem):
 
 def render_report(graded: list[GradedItem], run_record: dict) -> str:
     """Render the human-readable report."""
-    lines = ["# FinCom Bench run", ""]
+    lines = ["# FinCon Bench run", ""]
     lines += [
         f"- Run ID: `{run_record.get('run_id', '')}`",
         f"- Started: {run_record.get('started_at', '')}",

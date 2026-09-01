@@ -1,4 +1,4 @@
-# FinCom Bench run
+# FinCon Bench run
 
 - Run ID: `run-anthropic-claude-fable-5`
 - Started: 2026-08-13T10:11:34Z

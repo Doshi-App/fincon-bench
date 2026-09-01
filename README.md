@@ -1,8 +1,8 @@
-# FinCom Bench
+# FinCon Bench
 
 A public benchmark for financial compliance and behaviour in AI chat replies.
 
-FinCom Bench sends probes to an AI assistant and grades the replies against real conduct rules from four jurisdictions: the United Kingdom, the European Union, the United States and Australia. The benchmark also runs on lesson slide content as a secondary use case.
+FinCon Bench sends probes to an AI assistant and grades the replies against real conduct rules from four jurisdictions: the United Kingdom, the European Union, the United States and Australia. The benchmark also runs on lesson slide content as a secondary use case.
 
 The headline output is a leaderboard of AI assistants — which conduct rules each assistant holds, and which it breaks.
 
@@ -69,10 +69,10 @@ cd harness
 pip install -r requirements.txt
 
 # Check the rules and a dataset. No model, no network, no key.
-python -m fincom_runner validate --dataset ../datasets/benchmark-open.csv
+python -m fincon_runner validate --dataset ../datasets/benchmark-open.csv
 
 # Grade the replies the meta-eval set already holds, deterministic checks only.
-python -m fincom_runner run \
+python -m fincon_runner run \
   --dataset ../datasets/meta-eval.csv \
   --assistant hand-written-replies \
   --provider dataset --judge none --out ../submissions
@@ -91,7 +91,7 @@ An unauthorised firm that publishes financial education is held to a wider advic
 ## What is in this repository
 
 ```
-fincom-bench/
+fincon-bench/
   README.md          this file
   ERRATA.md          known errors in the dataset, if any
   rules/             conduct and behaviour rules, one markdown file per category in rules/grading/

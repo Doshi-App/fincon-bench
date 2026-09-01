@@ -2,7 +2,7 @@
   "run_id": "run-ollama-mistral-large-3-675b",
   "assistant": "ollama:mistral-large-3:675b",
   "started_at": "2026-08-13T07:11:14Z",
-  "dataset": "../fincom-bench/benchmark-open.csv",
+  "dataset": "../fincon-bench/benchmark-open.csv",
   "provider": "ollama:mistral-large-3:675b",
   "judge": "bedrock:mistral.mistral-large-3-675b-instruct",
   "permissions": "none",

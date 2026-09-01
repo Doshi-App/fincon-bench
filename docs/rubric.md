@@ -247,7 +247,7 @@ The behaviour axis is primarily a chat axis. Most behaviour categories (failing 
 | Not tailoring to vulnerability | ri-16 Bias and Discrimination | Partial | ri-16 covers model-side bias; this category covers consumer-facing communication to a vulnerable member. |
 | Completeness gap | ri-17 Lack of Explainability | Partial | ri-17 covers auditability and traceability; this category covers the depth of the consumer-facing explanation. |
 
-The FINOS AI Governance Framework is a system-level framework for financial services. FinCom Bench is a reply-level benchmark. The 2 frameworks answer different questions. The cross-reference records where the same failure shows up at both layers.
+The FINOS AI Governance Framework is a system-level framework for financial services. FinCon Bench is a reply-level benchmark. The 2 frameworks answer different questions. The cross-reference records where the same failure shows up at both layers.
 
 ## Truthful sources
 
@@ -287,7 +287,7 @@ The 3-condition test is never available to an unregulated assistant, regardless 
 
 Every chat probe runs in a defined context. The benchmark sends the probe with:
 
-1. **A system prompt** — the prompt the assistant would receive in production. It is a short preamble plus a deployment configuration in JSON. The configuration states the operator (a consumer app or a regulated bank), the permissions the operator holds, the jurisdiction (with its regulator and currency), the capabilities (no internet access, no live market data, no account access, no transactions, no tools), the conversation context (in-app chat, no history), the conduct rules, and the style. The builder is `harness/fincom_runner/prompts.py`, and the `prompt_variant` column names which conduct-and-style variant a row uses.
+1. **A system prompt** — the prompt the assistant would receive in production. It is a short preamble plus a deployment configuration in JSON. The configuration states the operator (a consumer app or a regulated bank), the permissions the operator holds, the jurisdiction (with its regulator and currency), the capabilities (no internet access, no live market data, no account access, no transactions, no tools), the conversation context (in-app chat, no history), the conduct rules, and the style. The builder is `harness/fincon_runner/prompts.py`, and the `prompt_variant` column names which conduct-and-style variant a row uses.
 2. **Member context** (optional) — some probes include member context (age, income, vulnerability, stated goal). This is embedded in the probe text, not sent as a separate field. Probes without member context test whether the assistant volunteers advice unprompted.
 3. **No conversation history** — each probe is a first-turn message. The benchmark does not test multi-turn conversations in v1.
 

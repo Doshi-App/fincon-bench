@@ -36,7 +36,7 @@ export function allTopics(): Topic[] {
 }
 
 // Each sourcebook file ends with a "Machine-readable data below" section: a
-// fenced YAML block that harness/fincom_runner/figures.py reads, kept for
+// fenced YAML block that harness/fincon_runner/figures.py reads, kept for
 // reference and possible future use. No code parses it on the website today.
 // Cut it before render so the page shows the human prose, not a raw YAML dump.
 function stripMachineReadableBlock(raw: string): string {

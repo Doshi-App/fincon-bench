@@ -2,7 +2,7 @@
   "run_id": "run-bedrock-qwen-qwen3-235b-a22b-2507-v1-0-us-west-2",
   "assistant": "bedrock:qwen.qwen3-235b-a22b-2507-v1:0@us-west-2",
   "started_at": "2026-08-12T21:10:00Z",
-  "dataset": "../fincom-bench/benchmark-open.csv",
+  "dataset": "../fincon-bench/benchmark-open.csv",
   "provider": "bedrock:qwen.qwen3-235b-a22b-2507-v1:0@us-west-2",
   "judge": "bedrock:mistral.mistral-large-3-675b-instruct",
   "permissions": "none",

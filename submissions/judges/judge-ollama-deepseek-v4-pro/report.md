@@ -1,8 +1,8 @@
-# FinCom Bench run
+# FinCon Bench run
 
 - Run ID: `judge-ollama-deepseek-v4-pro`
 - Started: 2026-08-12T20:32:05Z
-- Dataset: `../fincom-bench/meta-eval.csv`
+- Dataset: `../fincon-bench/meta-eval.csv`
 - Provider: `dataset`
 - Judge: `ollama:deepseek-v4-pro`
 - Permissions applied: `from the dataset`

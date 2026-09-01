@@ -1,4 +1,4 @@
-# Contributing to FinCom Bench
+# Contributing to FinCon Bench
 
 Anyone may propose a rule. Anyone may report a dataset error. The rules below say how.
 
@@ -17,7 +17,7 @@ pytest
 Then check the rules, the figures, and every dataset you touched:
 
 ```bash
-python -m fincom_runner validate \
+python -m fincon_runner validate \
   --dataset ../datasets/benchmark-open.csv \
   --dataset ../datasets/benchmark-holdout.csv \
   --dataset ../datasets/meta-eval.csv
@@ -89,4 +89,4 @@ Open an issue with the [bug report template](.github/ISSUE_TEMPLATE/bug_report.m
 
 ## Cite the benchmark
 
-To cite FinCom Bench in a paper, use [`CITATION.cff`](CITATION.cff). GitHub renders it as a ready citation under **Cite this repository** on the repository home page, in both APA and BibTeX.
+To cite FinCon Bench in a paper, use [`CITATION.cff`](CITATION.cff). GitHub renders it as a ready citation under **Cite this repository** on the repository home page, in both APA and BibTeX.

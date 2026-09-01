@@ -2,7 +2,7 @@
   "run_id": "judge-ollama-nemotron-3-ultra",
   "assistant": "hand-written-replies",
   "started_at": "2026-08-12T20:32:12Z",
-  "dataset": "../fincom-bench/meta-eval.csv",
+  "dataset": "../fincon-bench/meta-eval.csv",
   "provider": "dataset",
   "judge": "ollama:nemotron-3-ultra",
   "permissions": "from the dataset",
