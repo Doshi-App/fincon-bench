@@ -25,6 +25,9 @@ A gate returns one of 4 verdicts.
 The run errs toward missing findings rather than toward false positives
 (docs/method.md). A short number such as an age is weak evidence on its own, so
 the gate only fails on it when the reply also names the subject of the figure.
+A reply that states an expired value and the current value of the same figure
+is `inconclusive`, not `fail`: a correct reply often names the old value to
+explain the change, and only the judge can tell that from a stale claim.
 """
 
 from __future__ import annotations
@@ -110,6 +113,24 @@ def _matches(values: tuple[str, ...], reply: str, numbers: set[str]) -> list[str
     return hits
 
 
+def _current_hits(figure: Figure, reply_lower: str, numbers: set[str]) -> list[str]:
+    """The parts of the figure's current value that the reply states.
+
+    A current value can be one number (`120000`) or a phrase that holds several
+    (`73 for born 1951-59, 75 for 1960 onward`). Any number from it that the
+    reply also states is a hit. A phrase with no number is a hit when the reply
+    contains it whole.
+    """
+    if not figure.current_value:
+        return []
+    current_numbers = _numbers_in(figure.current_value)
+    if current_numbers:
+        return sorted(current_numbers & numbers)
+    if figure.current_value.lower() in reply_lower:
+        return [figure.current_value]
+    return []
+
+
 def figure_gate(item: Item, reply: str, figure_book: FigureBook) -> GateResult:
     """Check the reply against the published figures for its jurisdiction."""
     candidates = figure_book.gateable(item.jurisdiction)
@@ -123,11 +144,20 @@ def figure_gate(item: Item, reply: str, figure_book: FigureBook) -> GateResult:
     numbers = _numbers_in(reply)
     reply_lower = reply.lower()
     weak: list[tuple[Figure, str]] = []
+    both: list[tuple[Figure, str, str]] = []
     passes: list[tuple[Figure, str]] = []
 
     for figure in candidates:
         stale_hits = _matches(figure.stale_values, reply, numbers)
+        current_hits = _current_hits(figure, reply_lower, numbers)
         for hit in stale_hits:
+            if current_hits:
+                # The reply names the expired value and the current one. A
+                # correct reply often does this ("was 72, now 73"). The gate
+                # cannot tell that from a reply that states the old value as
+                # current, so the judge decides with both values in view.
+                both.append((figure, hit, current_hits[0]))
+                continue
             if _is_strong(hit, figure, reply_lower):
                 return GateResult(
                     applied=True,
@@ -144,6 +174,22 @@ def figure_gate(item: Item, reply: str, figure_book: FigureBook) -> GateResult:
         if figure.current_value:
             for hit in _matches((figure.current_value,), reply, numbers):
                 passes.append((figure, hit))
+
+    if both:
+        figure, stale, current = both[0]
+        return GateResult(
+            applied=True,
+            verdict="inconclusive",
+            figure_id=figure.figure_id,
+            evidence=tuple(hit for _, hit, _ in both),
+            detail=(
+                f"The reply contains `{stale}`, an expired value for "
+                f"{figure.authority.clause} ({figure.authority.source}), and also "
+                f"`{current}`, which is part of the current value "
+                f"`{figure.current_value}`. The judge decides whether the reply "
+                f"presents the expired value as current or names it as the old one."
+            ),
+        )
 
     if weak:
         figure, hit = weak[0]
