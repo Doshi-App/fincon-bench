@@ -28,6 +28,10 @@ no verdict and no model name.
 Usage:
     python3 harness/pipeline/draw_pass_candidates.py
     python3 harness/pipeline/draw_pass_candidates.py --passes 60 --decoys 15 --seed 0
+    # a second batch that skips the first and numbers on from it
+    python3 harness/pipeline/draw_pass_candidates.py --passes 60 --decoys 0 --seed 1 \
+        --exclude-hints harness/pipeline/pass-candidates-hints.csv \
+        --out harness/pipeline/pass-candidates-2.csv --hints harness/pipeline/pass-candidates-hints-2.csv
 
 Then label with:
     python3 harness/pipeline/label_rows.py --labeller <you> \
@@ -130,7 +134,10 @@ def to_meta_row(row: dict, item_id: int, meta: dict[str, dict]) -> dict:
         "category": row["category"],
         "rule_id": row["rule_id"] or source["rule_id"],
         "system_prompt": source["system_prompt"],
-        "permissions": row["permissions"] or source["permissions"],
+        # The run graded every reply under a `--permissions none` override, but the
+        # model saw the source row's system prompt. The row records what the model
+        # saw, so the permissions column agrees with the prompt (tests enforce it).
+        "permissions": source["permissions"],
         "prompt_variant": source["prompt_variant"],
         "probe": row["probe"],
         "reply": row["reply"],
@@ -147,6 +154,10 @@ def main() -> int:
     parser.add_argument("--meta-eval", default=str(META_EVAL))
     parser.add_argument("--out", default=str(CANDIDATES_OUT))
     parser.add_argument("--hints", default=str(HINTS_OUT))
+    parser.add_argument(
+        "--exclude-hints", action="append", default=[],
+        help="Hints file from an earlier draw. Its rows are skipped and item_ids continue after its last.",
+    )
     args = parser.parse_args()
 
     rng = random.Random(args.seed)
@@ -158,6 +169,13 @@ def main() -> int:
     next_id = max(int(r["item_id"]) for r in meta_rows) + 1
 
     excluded = candidate_judges(SELECT_JUDGE)
+    drawn_before: set[tuple[str, str]] = set()
+    for path in args.exclude_hints:
+        with open(path, newline="", encoding="utf-8") as fh:
+            for h in csv.DictReader(fh):
+                drawn_before.add((h["source_model"], h["source_item_id"]))
+                next_id = max(next_id, int(h["item_id"]) + 1)
+    rows = [r for r in rows if (r["model"], r["item_id"]) not in drawn_before]
     passes = draw(eligible(rows, excluded, "pass"), args.passes, rng)
     decoys = draw(eligible(rows, excluded, "fail"), args.decoys, rng)
 
