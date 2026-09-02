@@ -24,7 +24,7 @@ The authors sell a product that will appear on this benchmark's leaderboard. Sec
 
 An artificial-intelligence assistant inside a bank's own app answers a member's question about money. The reply is either lawful or it is not. FinCon Bench grades that reply against named clauses of financial conduct law in four jurisdictions: the United Kingdom, the European Union, the United States and Australia.
 
-The benchmark holds 274 probes. Each probe is a realistic first-turn member message. Each probe carries one finding category, one jurisdiction, and one rule identifier that points at a clause. An assistant under test writes its own reply to each probe. A judge model grades each reply against that clause's rubric. The output is a pass or a fail per probe, aggregated into a leaderboard.
+The benchmark holds 394 probes. Each probe is a realistic first-turn member message. Each probe carries one finding category, one jurisdiction, and one rule identifier that points at a clause. An assistant under test writes its own reply to each probe. A judge model grades each reply against that clause's rubric. The output is a pass or a fail per probe, aggregated into a leaderboard.
 
 The unit of grading is one reply against one clause. That is the design decision the rest of this paper defends.
 
@@ -61,7 +61,7 @@ Section 9.1 states what those mitigations do not fix.
 ### 1.5 What version v1 contributes
 
 1. A clause-level conduct register across four jurisdictions, with the authority and the bound party recorded for every rule.
-2. A 274-probe dataset covering 15 finding categories on two axes, split 70/30, stratified by category.
+2. A 394-probe dataset covering 15 finding categories on two axes, split 70/30, stratified by category.
 3. A grading rubric per category, written as pass criteria and fail criteria against the clause.
 4. A stated two-pass method: choose the judge against human labels, then score assistants with the chosen judge.
 5. An honest account of one ground-truth claim that did not survive contact with the data — see section 5.4.
@@ -188,7 +188,7 @@ Tying any layer to a group the member belongs to lifts it to condition 1. "Peopl
 
 The worked consequence, on one sentence: *"Given your goals, this ISA is suitable for you."* This is a finding against an unregulated assistant — a particular investment plus a suitability claim, both conditions met. It is a pass against a regulated bank assistant — specificity and suitability are present, but there is no steer, so the third condition fails.
 
-The dataset records the threshold per row in a `permissions` column: 135 of 274 rows carry `none` and 139 carry `investment_advice`. A submission declares its regulatory status on entry, the harness applies the matching test, and the leaderboard displays which threshold each assistant was scored against. A reader must be able to see that one assistant failed a 2-condition test while another passed a 3-condition test on the same probe.
+The dataset records the threshold per row in a `permissions` column: 195 of 394 rows carry `none` and 199 carry `investment_advice`. A submission declares its regulatory status on entry, the harness applies the matching test, and the leaderboard displays which threshold each assistant was scored against. A reader must be able to see that one assistant failed a 2-condition test while another passed a 3-condition test on the same probe.
 
 Two clarifications that follow from the clauses rather than from convenience. Steer is not required at the unregulated threshold — PERG 8.30A.14G(3) to (4) treats it as a recommendation even where the assistant helps the member pick what they already want. And a formal suitability assessment is not required either — PERG 8.24.1DG(2) means that saying the product suits the member is enough, even though nobody expects an unauthorised assistant to have performed a suitability process.
 
@@ -279,7 +279,7 @@ This is the section that carries the paper.
 
 ### 5.1 What the set contains
 
-274 probes. Each is written fresh from the rule books.
+394 probes. Each is written fresh from the rule books.
 
 | Jurisdiction | Probes |
 |---|---|
@@ -315,11 +315,11 @@ Product recommendation is deliberately the largest category, at 36 probes. It is
 
 ### 5.2 The two passes, and why the probes are reused
 
-The same 274 probes are used twice, for two different jobs.
+The same 394 probes are used twice, for two different jobs.
 
-**Pass 1 chooses the judge.** `datasets/meta-eval.csv` holds all 274 probes with a **pre-written reply** in each row. Two human labellers read the rule and mark each reply pass or fail. Five candidate judge models mark the same rows with no sight of the human labels. The model whose labels agree most with the humans, by macro F1 per category, becomes the judge.
+**Pass 1 chooses the judge.** `datasets/meta-eval.csv` holds all 394 probes with a **pre-written reply** in each row. Two human labellers read the rule and mark each reply pass or fail. Five candidate judge models mark the same rows with no sight of the human labels. The model whose labels agree most with the humans, by macro F1 per category, becomes the judge.
 
-**Pass 2 scores the assistants.** The same 274 probes are reused with the reply column removed. They are split into `benchmark-open.csv` (191 rows) and `benchmark-holdout.csv` (83 rows). All three dataset files carry the structured deployment-configuration system prompt (§3.5). A recorded reply must come from the prompt recorded next to it, so when a prompt changes, the pass-1 replies are regenerated before anyone labels them. The runner sends each probe to each assistant under test, each assistant writes its own reply, and the pass-1 winning judge marks every reply against the same rules.
+**Pass 2 scores the assistants.** The same 394 probes are reused with the reply column removed. They are split into `benchmark-open.csv` (275 rows) and `benchmark-holdout.csv` (119 rows). All three dataset files carry the structured deployment-configuration system prompt (§3.5). A recorded reply must come from the prompt recorded next to it, so when a prompt changes, the pass-1 replies are regenerated before anyone labels them. The runner sends each probe to each assistant under test, each assistant writes its own reply, and the pass-1 winning judge marks every reply against the same rules.
 
 Two properties of this design need stating because they are easy to misread.
 
@@ -337,7 +337,7 @@ Four defences, in descending strength.
 
 **The set carries passes as well as fails.** A benchmark of breaches only measures how easily a judge says "fail", not whether it can tell a compliant reply from a non-compliant one. Items whose correct label is "pass" are included in every category, and the `naming_a_bias_helpfully` category is scored inversely — the presence of helpful bias-naming is a pass, its absence is neutral, and exploiting the same bias fails under a different category.
 
-**The split is stratified, not random.** The 70/30 split is stratified by category so both halves cover all 15 categories: 191 rows in the primary file, 83 in the reserve file. Both files are published — see section 9.2; the benchmark claims no contamination resistance. Random sampling at this set size would leave categories with zero rows in one half, and a stratified sample is standard practice for exactly that reason.
+**The split is stratified, not random.** The 70/30 split is stratified by category so both halves cover all 15 categories: 275 rows in the primary file, 119 in the reserve file. Both files are published — see section 9.2; the benchmark claims no contamination resistance. Random sampling at this set size would leave categories with zero rows in one half, and a stratified sample is standard practice for exactly that reason.
 
 We can also state what we did **not** do, which is where FinanceBench's example is instructive and where we fall short of it. FinanceBench recruited 20 annotators, discarded the work of five for quality, and published that discard rate. Our probes were written by a small internal team with no attrition to report, so there is no discard rate to publish, and the credibility that FinanceBench buys with that number is not available to us. Section 9.2 says what would fix it.
 
@@ -470,10 +470,10 @@ Against an inter-labeller reference line rather than against truth, following He
 
 ### 7.3 The procedure
 
-1. All 274 rows in `meta-eval.csv` carry a pre-written reply.
+1. All 394 rows in `meta-eval.csv` carry a pre-written reply.
 2. Two human labellers mark each row pass or fail independently, working from the rule and the rubric.
 3. Disagreements are resolved by discussion, and the agreed label is recorded as `human_label`. The pre-resolution labels supply the inter-labeller reference line.
-4. Candidate judge models mark all 274 rows with no sight of the human labels: GPT-5.6 Sol, GPT-5.6 Terra, GPT-5.6 Luna, Claude Opus 5, Claude Sonnet 5, Gemini 2.5 Pro, Grok 4.5, Llama 4 Maverick, Qwen3-235B-A22B, DeepSeek-V3, Mistral Large 3, GLM-4.5.
+4. Candidate judge models mark all 394 rows with no sight of the human labels: GPT-5.6 Sol, GPT-5.6 Terra, GPT-5.6 Luna, Claude Opus 5, Claude Sonnet 5, Gemini 2.5 Pro, Grok 4.5, Llama 4 Maverick, Qwen3-235B-A22B, DeepSeek-V3, Mistral Large 3, GLM-4.5.
 5. Macro F1 per category is computed for each candidate against `human_label`.
 6. The best-agreeing candidate becomes the benchmark judge.
 
@@ -483,7 +483,7 @@ The human labels are never published. A candidate judge cannot read them before 
 
 | Quantity | v1 value |
 |---|---|
-| Rows labelled by human labellers | 0 of 274 |
+| Rows labelled by human labellers | 0 of 394 |
 | Inter-labeller agreement | Not yet measured |
 | Candidate judge runs completed | 0 of 5 |
 | Macro F1 per category, per candidate | Not yet measured |
@@ -493,7 +493,7 @@ The human labels are never published. A candidate judge cannot read them before 
 
 Our per-category sample will be small, and we would rather state the number now than have it noticed later.
 
-HealthBench reports 60,896 meta-examples, averaging 1,791 per criterion, with a minimum of 1,072. FinCon Bench has 274 items across 15 categories — between 14 and 36 rows per category. That is two orders of magnitude smaller.
+HealthBench reports 60,896 meta-examples, averaging 1,791 per criterion, with a minimum of 1,072. FinCon Bench has 394 items across 15 categories — between 22 and 44 rows per category. That is two orders of magnitude smaller.
 
 The consequence is specific: a macro F1 computed on 14 rows has a confidence interval wide enough to swallow the difference between two candidate judges. Version v2 will report the interval alongside the point estimate and will not claim a winner where the intervals overlap. If they all overlap, the honest finding is that this set cannot distinguish these five judges, and the fix is more labelled rows rather than a firmer-sounding sentence.
 
@@ -552,7 +552,7 @@ We wrote the rules, we wrote the probes, we wrote the rubrics, we chose the judg
 
 What we do about it:
 
-- The method, the register, the rubrics and 191 of 274 probes are open.
+- The method, the register, the rubrics and 275 of 394 probes are open.
 - Every submission publishes its full transcript, so any row can be checked against the replies that produced it.
 - Our own row carries "unverified" beside the score and the fixed disclosure sentence in section 10.2, until an outside party runs the benchmark and reports.
 
@@ -562,7 +562,7 @@ We should also expect the norm applied elsewhere to be applied to us: in Novembe
 
 ### 9.2 There is no held-out split, by decision
 
-The repository tracks `benchmark-holdout.csv`, the 83-row split, alongside the 191-row `benchmark-open.csv`. Both files are published. Earlier drafts claimed the 83 rows were held out to prevent training on the test set. That claim was false as the repository stood, and the decision taken for v1 is to publish everything and drop the claim, rather than to remove the file and become the gatekeeper of every outside score. The held-out splits that survive elsewhere do so by social gating rather than secrecy.
+The repository tracks `benchmark-holdout.csv`, the 119-row split, alongside the 275-row `benchmark-open.csv`. Both files are published. Earlier drafts claimed the 119 rows were held out to prevent training on the test set. That claim was false as the repository stood, and the decision taken for v1 is to publish everything and drop the claim, rather than to remove the file and become the gatekeeper of every outside score. The held-out splits that survive elsewhere do so by social gating rather than secrecy.
 
 This paper therefore claims no contamination resistance anywhere. The 83-row file is kept only as the seed of a possible future gated split, and submissions report the two halves separately. The related exposure stands: the probes are written from public rule books in ordinary English, and a model may well have seen text resembling them.
 
@@ -623,7 +623,7 @@ None of these is graded. Where a rule depends on one, the register records the d
 
 ### 10.1 What is published and what is not
 
-**Published:** the rule register with citations, the rubrics, the method, 191 of 274 probes, every submission transcript, `ERRATA.md`, and the aggregate count of filed corrections.
+**Published:** the rule register with citations, the rubrics, the method, 275 of 394 probes, every submission transcript, `ERRATA.md`, and the aggregate count of filed corrections.
 
 **Not published:** the human labels; any real correction, in whole or in part; any institution's name without written consent.
 
@@ -649,7 +649,7 @@ Version v1 of this paper is reproducible in the sense that the method can be che
 
 ### 10.4 What v2 must add
 
-1. Human labels on all 274 rows, and the inter-labeller agreement.
+1. Human labels on all 394 rows, and the inter-labeller agreement.
 2. Macro F1 per category for all five candidate judges, with confidence intervals.
 3. The first full run, and the four baselines in section 8.1.
 4. Recall against the 254 compliance-relevant filed corrections, per filed category, and a re-derived recall bar.
@@ -696,7 +696,7 @@ Collected in one place so a reader does not have to assemble it from nine sectio
 
 | Quantity | Status in v1.1 | Blocked on |
 |---|---|---|
-| Human labels | 100 of 274 rows, one labeller (92 fail / 8 pass) | A second labeller, and more pass-class rows |
+| Human labels | 100 of 394 rows, one labeller (92 fail / 8 pass) | A second labeller, and more pass-class rows |
 | Inter-labeller agreement | Not measured | A second labeller marking the same rows |
 | Judge macro F1 overall | 0.8194 for the selected judge, over 100 rows | — |
 | Judge macro F1 per category | Not measured | Too few rows per category to support it |

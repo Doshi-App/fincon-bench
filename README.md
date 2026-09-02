@@ -22,13 +22,13 @@ flowchart TB
   subgraph P1["PASS 1 — choose the judge (the replies already exist)"]
     direction LR
     R["Rules<br/>15 categories x 4 jurisdictions<br/>each cites a clause"]
-    D["Meta-eval set<br/>274 rows, written by hand<br/>probe filled, reply filled, label blank"]
+    D["Meta-eval set<br/>394 rows, written by hand<br/>probe filled, reply filled, label blank"]
     H["Human labellers<br/>2 people read the rule<br/>and mark pass or fail"]
     M["Candidate judges<br/>5 models mark the same rows<br/>with no sight of the labels"]
     J["THE JUDGE<br/>the model that agrees most<br/>with the two people"]
     R -->|"define a breach"| D
-    D -->|"all 274 rows"| H
-    D -->|"all 274 rows"| M
+    D -->|"all 394 rows"| H
+    D -->|"all 394 rows"| M
     H -->|"gold labels"| J
     M -->|"5 label sets"| J
   end
@@ -105,9 +105,9 @@ fincon-bench/
                      judges/  phase 1, one directory per candidate judge
                      runs/    phase 2, one directory per scored assistant
   datasets/
-    meta-eval.csv         the meta-eval set: 274 probes with replies, labels blank
-    benchmark-open.csv    the main evaluation set: 191 probes, no replies, no labels
-    benchmark-holdout.csv the future-gated seed set: 83 probes, no replies, no labels
+    meta-eval.csv         the meta-eval set: 394 probes with replies, labels blank
+    benchmark-open.csv    the main evaluation set: 275 probes, no replies, no labels
+    benchmark-holdout.csv the future-gated seed set: 119 probes, no replies, no labels
 ```
 
 ## The rule record
@@ -143,20 +143,20 @@ A rule lands only by pull request. The pull request must attach the citation. On
 
 ## The dataset
 
-The benchmark uses one set of 274 probes, applied in two phases.
+The benchmark uses one set of 394 probes, applied in two phases.
 
-**Phase 1 — choose the judge (meta-eval).** The file `datasets/meta-eval.csv` holds 274 probes. Each probe has a pre-written reply. Human labellers mark each reply pass or fail. Five candidate judge models also mark each reply. The model with the best macro-F1 against the human labels becomes the judge.
+**Phase 1 — choose the judge (meta-eval).** The file `datasets/meta-eval.csv` holds 394 probes. Each probe has a pre-written reply. Human labellers mark each reply pass or fail. Five candidate judge models also mark each reply. The model with the best macro-F1 against the human labels becomes the judge.
 
-**Phase 2 — score the assistants (benchmark).** The same 274 probes are reused, but the reply column is removed. The runner sends each probe to each assistant. Each assistant produces a reply. The judge scores each reply pass or fail. The result is a pass/fail matrix on the leaderboard. The full benchmark set is the union of `benchmark-open.csv` and `benchmark-holdout.csv`.
+**Phase 2 — score the assistants (benchmark).** The same 394 probes are reused, but the reply column is removed. The runner sends each probe to each assistant. Each assistant produces a reply. The judge scores each reply pass or fail. The result is a pass/fail matrix on the leaderboard. The full benchmark set is the union of `benchmark-open.csv` and `benchmark-holdout.csv`.
 
 ### Open and holdout split
 
-The 274 probes are split 70/30, stratified by category so both halves cover all 15 categories.
+The 394 probes are split 70/30, stratified by category so both halves cover all 15 categories.
 
 | File | Rows | Purpose |
 |---|---|---|
-| `benchmark-open.csv` | 191 | The primary evaluation set. Anyone may run a submission on these probes. |
-| `benchmark-holdout.csv` | 83 | Reserved as the seed of a future gated split; reported separately per submission. |
+| `benchmark-open.csv` | 275 | The primary evaluation set. Anyone may run a submission on these probes. |
+| `benchmark-holdout.csv` | 119 | Reserved as the seed of a future gated split; reported separately per submission. |
 
 Both files are published. The benchmark makes **no contamination-resistance claim**: a model may have seen these probes or text like them. The split is kept so a future gated split can reuse it, and so a submission can report the two halves separately.
 

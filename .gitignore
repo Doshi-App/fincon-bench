@@ -9,6 +9,7 @@ __pycache__/
 *.py[cod]
 
 *.env
+.env.local
 
 # Node / Next.js build artifacts for the website.
 node_modules/

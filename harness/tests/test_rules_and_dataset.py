@@ -62,13 +62,13 @@ class FigureBookTest(unittest.TestCase):
 class DatasetTest(unittest.TestCase):
     def test_the_benchmark_set_loads_with_no_reply(self):
         items = load_chat_items(REPO / "datasets" / "benchmark-open.csv")
-        self.assertEqual(len(items), 191)
+        self.assertEqual(len(items), 275)
         self.assertTrue(all(item.reply == "" for item in items))
         self.assertTrue(all(item.category in ALL_CATEGORIES for item in items))
 
     def test_the_meta_eval_set_loads_with_a_reply(self):
         items = load_chat_items(REPO / "datasets" / "meta-eval.csv")
-        self.assertEqual(len(items), 274)
+        self.assertEqual(len(items), 394)
         self.assertTrue(all(item.reply for item in items))
 
     def test_a_missing_column_is_an_error(self):
