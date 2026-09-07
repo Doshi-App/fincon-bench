@@ -68,13 +68,23 @@ CANDIDATES=(
   "ollama:kimi-k2.7-code"
   "ollama:glm-5.3-flash"
   "ollama:deepseek-v4-flash:0731"
+  "ollama:kimi-k3"
+  "ollama:glm-5.3"
+  # Direct frontier lanes. Paid per call; the scorer skips each judge's own replies.
+  "anthropic:claude-opus-5"
+  "anthropic:claude-sonnet-5"
+  "anthropic:claude-opus-4-8"
+  "openai:gpt-5.6-terra"
+  "openai:gpt-5.6-luna"
 )
 
 MAX_PARALLEL=5
 
 slug() { echo "$1" | tr ':/@.' '----' | tr -cd 'A-Za-z0-9-'; }
 
+# SKIP_JUDGES is an optional regex; matching candidates are left out of this run.
 for candidate in "${CANDIDATES[@]}"; do
+  if [ -n "${SKIP_JUDGES:-}" ] && [[ "$candidate" =~ $SKIP_JUDGES ]]; then echo "skip $candidate" >>logs/select-judge.log; continue; fi
   while [ "$(jobs -rp | wc -l)" -ge "$MAX_PARALLEL" ]; do wait -n; done
   name="judge-$(slug "$candidate")"
   (

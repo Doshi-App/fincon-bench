@@ -208,6 +208,10 @@ class JudgeResult:
             "model": self.model,
             "reasoning": self.reasoning,
             "quoted_text": self.quoted_text,
+            # The judge's own words when the verdict could not be read, so a
+            # parse failure can be inspected, and re-parsed, without paying
+            # for the call again.
+            **({"raw": self.raw[:4000]} if self.verdict == "error" and self.raw else {}),
         }
 
 

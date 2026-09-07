@@ -34,7 +34,32 @@ from .models import (
 )
 
 VALID_VERDICTS = ("fail", "pass", "arguable")
-JSON_BLOCK = re.compile(r"\{.*\}", re.S)
+JSON_BLOCK = re.compile(r"\{.*\}", re.S)  # kept for callers; parse_verdict uses _json_candidates
+
+
+def _json_candidates(raw: str) -> list[str]:
+    """Every balanced {...} span in the text, outermost first, left to right.
+
+    Judges wrap the answer in ```json fences, add a sentence after it, or
+    mention braces in prose. A greedy first-to-last-brace match swallowed all
+    of that and failed to parse. Balanced spans let the first well-formed
+    object win, whatever surrounds it.
+    """
+    spans, depth, start, in_str, esc = [], 0, -1, False, False
+    for i, ch in enumerate(raw):
+        if in_str:
+            if esc: esc = False
+            elif ch == "\\": esc = True
+            elif ch == '"': in_str = False
+            continue
+        if ch == '"' and depth > 0: in_str = True
+        elif ch == "{":
+            if depth == 0: start = i
+            depth += 1
+        elif ch == "}" and depth > 0:
+            depth -= 1
+            if depth == 0: spans.append(raw[start:i + 1])
+    return spans
 
 # The rubric section that names dataset rows and their answers. It is dropped
 # from the prompt by default, so a judge cannot read the answer to a row it is
@@ -178,21 +203,31 @@ def build_prompt(
 
 def parse_verdict(raw: str, model: str) -> JudgeResult:
     """Read the judge's JSON answer. Anything else is an error."""
-    match = JSON_BLOCK.search(raw or "")
-    if not match:
+    candidates = _json_candidates(raw or "")
+    if not candidates:
         return JudgeResult(
             verdict="error",
             model=model,
             reasoning="The judge did not answer with JSON.",
             raw=raw,
         )
-    try:
-        payload = json.loads(match.group(0))
-    except json.JSONDecodeError as exc:
+    payload, last_error = None, None
+    for candidate in candidates:
+        try:
+            parsed = json.loads(candidate)
+        except json.JSONDecodeError as exc:
+            last_error = exc
+            continue
+        if isinstance(parsed, dict) and "verdict" in parsed:
+            payload = parsed
+            break
+        if payload is None and isinstance(parsed, dict):
+            payload = parsed
+    if payload is None:
         return JudgeResult(
             verdict="error",
             model=model,
-            reasoning=f"The judge's JSON did not parse: {exc}",
+            reasoning=f"The judge's JSON did not parse: {last_error}",
             raw=raw,
         )
 
@@ -306,28 +341,44 @@ class OpenAiJudge(Judge):
         self.name = f"openai:{model}"
         self.max_tokens = max_tokens
 
+    def _create(self, prompt: str):
+        """One chat call. Newer OpenAI models reject `max_tokens` (they want
+        `max_completion_tokens`) and reject any `temperature` but the default,
+        while OpenAI-compatible hosts reached through OPENAI_BASE_URL may only
+        know the older names. Start with the modern shape and fall back on the
+        specific 400 each host returns, so one code path serves both."""
+        kwargs: dict = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_completion_tokens": self.max_tokens,
+            "temperature": 0.0,
+        }
+        for _ in range(3):
+            try:
+                return self.client.chat.completions.create(**kwargs)
+            except Exception as exc:  # noqa: BLE001 - inspect, then re-raise if not a parameter complaint
+                text = str(exc)
+                if "max_completion_tokens" in text and "max_completion_tokens" in kwargs:
+                    kwargs["max_tokens"] = kwargs.pop("max_completion_tokens")
+                    continue
+                if "temperature" in text and "temperature" in kwargs:
+                    kwargs.pop("temperature")
+                    continue
+                raise
+        return self.client.chat.completions.create(**kwargs)
+
     def mark(self, prompt: str) -> JudgeResult:  # pragma: no cover - needs the network
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                max_tokens=self.max_tokens,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.0,
-            )
+            response = self._create(prompt)
         except Exception as exc:  # noqa: BLE001 - the judge must not crash the run
             return JudgeResult(verdict="error", model=self.model, reasoning=str(exc))
         text = response.choices[0].message.content or ""
         result = parse_verdict(text, self.model)
-        # Kimi sometimes returns an empty first chunk; retry once if the verdict is an
-        # error because the response was blank.
-        if result.verdict == "error" and not text.strip():
+        # Kimi sometimes returns an empty first chunk, and GPT-5.6 occasionally
+        # emits JSON that does not parse. One retry covers both.
+        if result.verdict == "error":
             try:
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    max_tokens=self.max_tokens,
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.0,
-                )
+                response = self._create(prompt)
                 text = response.choices[0].message.content or ""
                 result = parse_verdict(text, self.model)
             except Exception as exc:  # noqa: BLE001

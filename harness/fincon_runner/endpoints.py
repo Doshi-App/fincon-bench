@@ -139,7 +139,25 @@ def ollama_chat(
     )
     message = body.get("message") or {}
     text = (message.get("content") or "").strip()
-    if not text:
-        # A thinking model can spend the whole budget before the answer.
-        text = (message.get("thinking") or "").strip()
+    if not text and message.get("thinking"):
+        # A thinking model spent the whole budget before the answer. Ask once
+        # more with thinking off so the reply itself comes back; the earlier
+        # fallback handed the thinking text to the parser, which never held
+        # the JSON answer.
+        body = _with_retries(
+            lambda: _post(
+                OLLAMA_URL,
+                {
+                    "model": model,
+                    "messages": messages,
+                    "stream": False,
+                    "think": False,
+                    "options": {"num_predict": max_tokens, "temperature": temperature},
+                },
+                {"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
+                timeout,
+            )
+        )
+        message = body.get("message") or {}
+        text = (message.get("content") or "").strip()
     return text, body.get("eval_count")
