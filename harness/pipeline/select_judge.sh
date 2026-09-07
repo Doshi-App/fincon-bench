@@ -64,6 +64,10 @@ CANDIDATES=(
   "ollama:qwen3.5:397b"
   "ollama:nemotron-3-ultra"
   "ollama:glm-5.2"
+  # Not on Bedrock as of 2026-09-07; Ollama Cloud is the only lane.
+  "ollama:kimi-k2.7-code"
+  "ollama:glm-5.3-flash"
+  "ollama:deepseek-v4-flash:0731"
 )
 
 MAX_PARALLEL=5

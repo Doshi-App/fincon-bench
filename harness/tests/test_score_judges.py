@@ -56,3 +56,12 @@ class OverlapTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class OwnReplyTest(unittest.TestCase):
+    def test_family_key_strips_lane_tag_and_region(self):
+        model_family = sj.model_family
+        self.assertEqual(model_family("ollama:deepseek-v4-flash:0731"), "deepseek-v4-flash")
+        self.assertEqual(model_family("deepseek-v4-flash:preview"), "deepseek-v4-flash")
+        self.assertEqual(model_family("bedrock:qwen.qwen3-235b-a22b-2507-v1:0@us-west-2"), "qwen.qwen3-235b-a22b-2507-v1")
+        self.assertNotEqual(model_family("ollama:kimi-k2.7-code"), model_family("bedrock:moonshotai.kimi-k2.5"))

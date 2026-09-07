@@ -54,6 +54,33 @@ def load_labels(path: Path) -> dict[str, str]:
         }
 
 
+def model_family(spec: str) -> str:
+    """Reduce a judge spec or a source model name to a comparable family key.
+
+    `ollama:deepseek-v4-flash:0731`, `deepseek-v4-flash:preview` and
+    `deepseek-v4-flash` all map to `deepseek-v4-flash`. A judge must not be
+    scored on a reply its own family wrote, so both sides go through this.
+    """
+    name = spec.strip().lower()
+    if name.startswith(("bedrock:", "ollama:", "anthropic:", "openai:")):
+        name = name.split(":", 1)[1]
+    name = name.split("@", 1)[0]
+    name = name.split(":", 1)[0]
+    return name
+
+
+def load_own_replies(paths: list[Path]) -> dict[str, str]:
+    """item_id -> family of the model that wrote that row's reply."""
+    owners: dict[str, str] = {}
+    for path in paths:
+        with path.open(newline="", encoding="utf-8") as fh:
+            for row in csv.DictReader(fh):
+                model = (row.get("source_model") or "").strip()
+                if model:
+                    owners[row["item_id"].strip()] = model_family(model)
+    return owners
+
+
 def load_transcript(path: Path) -> tuple[str, dict[str, dict]]:
     """Return the judge name and one record per item."""
     judge_name = ""
@@ -181,11 +208,16 @@ def score_run(
     name_override: str = "",
     draws: int = DEFAULT_BOOTSTRAP,
     seed: int = 0,
+    own_replies: dict[str, str] | None = None,
 ) -> dict:
     judge_name, records = load_transcript(path)
+    family = model_family(name_override or judge_name or path.parent.name)
     pairs: list[tuple[str, str]] = []
     reasons: Counter = Counter()
     for item_id, human in labels.items():
+        if own_replies and own_replies.get(item_id) == family:
+            reasons["own_reply"] += 1
+            continue
         record = records.get(item_id)
         if record is None:
             reasons["absent"] += 1
@@ -205,6 +237,7 @@ def score_run(
     row["arguable"] = reasons["arguable"]
     row["error_rate"] = round(reasons["error"] / labelled, 4) if labelled else 0.0
     row["ungraded"] = reasons["ungraded"] + reasons["absent"]
+    row["own_replies_skipped"] = reasons["own_reply"]
     row["transcript"] = str(path)
     return row
 
@@ -234,7 +267,7 @@ FIELDS = [
     "accuracy", "fail_precision", "fail_recall", "fail_f1", "pass_precision",
     "pass_recall", "pass_f1", "tp_fail", "tn_pass", "fp_false_finding",
     "fn_missed_finding", "compared", "coverage", "labelled_rows", "arguable",
-    "error_rate", "ungraded", "transcript",
+    "error_rate", "ungraded", "own_replies_skipped", "transcript",
 ]
 
 
@@ -248,14 +281,21 @@ def main() -> int:
         help=f"Resamples for the 95 percent intervals. Default {DEFAULT_BOOTSTRAP}. 0 turns them off.",
     )
     parser.add_argument("--seed", type=int, default=0, help="Seed for the resampling. Default 0.")
+    parser.add_argument(
+        "--own-replies", nargs="*", default=sorted(str(p) for p in Path("harness/pipeline").glob("pass-candidates-hints*.csv")),
+        help="Hints files naming which model wrote each model-written row. A judge is not scored "
+             "on rows its own model family wrote. Default: harness/pipeline/pass-candidates-hints*.csv.",
+    )
     args = parser.parse_args()
+    own_replies = load_own_replies([Path(p) for p in args.own_replies]) if args.own_replies else {}
 
     labels = load_labels(Path(args.labels))
     if not labels:
         print("No human labels found.")
         return 1
 
-    rows = [score_run(Path(p), labels, draws=args.bootstrap, seed=args.seed) for p in args.transcript]
+    rows = [score_run(Path(p), labels, draws=args.bootstrap, seed=args.seed, own_replies=own_replies)
+            for p in args.transcript]
     rows = [r for r in rows if r.get("compared")]
     rows += baseline_rows(labels, draws=args.bootstrap, seed=args.seed)
     # Macro-F1 decides, per the README. Coverage breaks a tie: a judge that
