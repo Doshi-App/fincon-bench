@@ -9,20 +9,28 @@
 # models bedrock and ollama cannot reach". Re-adding one here would pay for a
 # reply the free lane already produced.
 #
-# Each of these providers runs 1 pass per item by default (see
-# harness/fincon_runner/providers.py, REPEATED_PROVIDER_KINDS) — a paid
-# frontier call, unlike the 5 passes bedrock/ollama get, so this list should
+# Anthropic runs 3 passes per item and OpenAI 1 (see
+# harness/fincon_runner/providers.py, DEFAULT_REPEATS_BY_KIND) — paid
+# frontier calls, unlike the 5 passes bedrock/ollama get, so this list should
 # stay short.
+#
+# Append mode: an existing transcript gains only the probes it does not hold
+# yet (`--append`). Permissions are read from the dataset row.
 #
 # Usage:
 #   op run --env-file=secrets.op.env --no-masking -- \
-#     harness/pipeline/run_paid_keys.sh <judge-spec>
+#     harness/pipeline/run_paid_keys.sh <judge> [judge2] [tiebreak]
 set -uo pipefail
 
 cd "$(dirname "$0")/../.." || exit 1
 mkdir -p logs submissions/runs
 
-JUDGE="${1:?pass the winning judge spec, e.g. bedrock:mistral.mistral-large-3-675b-instruct}"
+JUDGE="${1:?pass the judge spec, e.g. ollama:deepseek-v4-pro}"
+JUDGE2="${2:-}"
+TIEBREAK="${3:-}"
+if [ -n "$JUDGE2" ] && [ -z "$TIEBREAK" ]; then echo "a second judge needs a tiebreak" >&2; exit 1; fi
+JUDGE_FLAGS=(--judge "$JUDGE")
+[ -n "$JUDGE2" ] && JUDGE_FLAGS+=(--judge2 "$JUDGE2" --tiebreak "$TIEBREAK")
 DATASET="../datasets/benchmark-open.csv"
 MAX_PARALLEL="${MAX_PARALLEL:-3}"
 
@@ -35,7 +43,7 @@ CONTESTANTS=(
   "openai:gpt-5.4-nano"
 )
 
-echo "judge: $JUDGE" >logs/paid-keys.log
+echo "judge: $JUDGE${JUDGE2:+ + $JUDGE2, tiebreak $TIEBREAK}" >logs/paid-keys.log
 echo "contestants: ${#CONTESTANTS[@]}" >>logs/paid-keys.log
 
 slug() { echo "$1" | tr ':/@.' '----' | tr -cd 'A-Za-z0-9-'; }
@@ -47,22 +55,18 @@ slug() { echo "$1" | tr ':/@.' '----' | tr -cd 'A-Za-z0-9-'; }
 running=0
 for contestant in "${CONTESTANTS[@]}"; do
   name="run-$(slug "$contestant")"
-  if [ -f "submissions/runs/${name}/transcript.jsonl" ]; then
-    echo "skip $contestant (done)" >>logs/paid-keys.log
-    continue
-  fi
   (
     cd harness || exit 1
     python3 -m fincon_runner run \
       --dataset "$DATASET" \
       --assistant "$contestant" \
       --provider "$contestant" \
-      --judge "$JUDGE" \
-      --permissions none \
-      --concurrency 4 \
+      "${JUDGE_FLAGS[@]}" \
+      --append \
+      --concurrency 2 \
       --run-id "$name" \
       --out ../submissions/runs \
-      --quiet >"../logs/${name}.log" 2>&1
+      --quiet >>"../logs/${name}.log" 2>&1
     echo "done $contestant rc=$?" >>../logs/paid-keys.log
   ) &
   running=$((running + 1))

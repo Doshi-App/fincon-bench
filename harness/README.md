@@ -214,6 +214,24 @@ Two prompt rules protect the run:
 The run works with `--judge none`. Items no check decided are recorded as
 `ungraded`, never as passes.
 
+### Two judges and a tiebreak
+
+`--judge A --judge2 B --tiebreak C` marks every reply with A and B, one after
+the other. When they agree, that is the verdict. When they differ, C marks the
+reply and its verdict stands. All three answers are kept on the pass (`judge`,
+`judge2`, `tiebreak`) with a `tiebreak_used` flag, and such a pass has
+`decided_by: tiebreak`. The item row carries the representative pass's
+answers, `tiebreak_used` set when any pass was contested, and
+`tiebreak_passes`, the number of passes that were. The leaderboard counts a
+tiebreak decision as a judge decision. A pass where A and B both fail to answer is an
+`error` and C is not spent on it; `pipeline/rejudge_errors.py` re-runs such
+rows. `--judge2` without `--tiebreak` is refused.
+
+`pipeline/rejudge_all.py <run-dir> --judge A --judge2 B --tiebreak C` marks
+every row of an existing run again under the new judges, on the stored reply,
+without calling the contestant. It is resumable (`transcript.rejudge.jsonl`)
+and reads each row's permissions from the dataset, not from the old record.
+
 ## Permissions and the threshold
 
 `docs/rubric.md` says the product recommendation threshold is a property of the
@@ -249,6 +267,12 @@ is a convention of this repository, not something the harness enforces.
 | `report.md` | The same run in human words. Findings first, highest product risk first. |
 
 The finding record follows the shape in `docs/method.md`.
+
+An existing run directory is never overwritten. `--append` grades only the
+items the transcript does not hold yet and adds them to the end; `run.json`
+records each append under `appended` and the leaderboard and report are
+rebuilt over every line. Without `--append`, a run whose transcript exists
+stops with an error.
 
 ## The other subcommands
 

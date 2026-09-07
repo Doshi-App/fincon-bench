@@ -369,3 +369,258 @@ class MissRateTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SeatJudge(Judge):
+    """A judge with a fixed verdict and a name, so a panel test can tell who spoke."""
+
+    def __init__(self, name, verdict, reasoning=None):
+        self.name = name
+        self.verdict = verdict
+        self.reasoning = reasoning or f"{name} says {verdict}"
+        self.calls = 0
+
+    def mark(self, prompt):
+        self.calls += 1
+        return JudgeResult(verdict=self.verdict, model=self.name, reasoning=self.reasoning)
+
+
+class TwoJudgePanelTest(unittest.TestCase):
+    def panel(self, a, b, c):
+        from fincon_runner.judge import JudgePanel
+
+        return JudgePanel(a, b, c)
+
+    def test_agreement_is_the_verdict_and_the_tiebreak_is_not_called(self):
+        a, b, c = SeatJudge("A", "pass"), SeatJudge("B", "pass"), SeatJudge("C", "fail")
+        graded = grade_item(bias_item(), config(), DatasetProvider(), self.panel(a, b, c), RULES, FIGURES)
+        self.assertEqual(graded.final_verdict, "pass")
+        self.assertEqual(graded.decided_by, "judge")
+        self.assertEqual(c.calls, 0)
+        self.assertFalse(graded.tiebreak_used)
+        self.assertIsNone(graded.tiebreak)
+        self.assertEqual(graded.judge.model, "A")
+        self.assertEqual(graded.judge2.model, "B")
+
+    def test_disagreement_goes_to_the_tiebreak_and_is_flagged(self):
+        a, b, c = SeatJudge("A", "pass"), SeatJudge("B", "fail"), SeatJudge("C", "fail")
+        graded = grade_item(bias_item(), config(), DatasetProvider(), self.panel(a, b, c), RULES, FIGURES)
+        self.assertEqual(graded.final_verdict, "fail")
+        self.assertEqual(graded.decided_by, "tiebreak")
+        self.assertEqual(c.calls, 1)
+        self.assertTrue(graded.tiebreak_used)
+        self.assertEqual(graded.tiebreak.model, "C")
+        self.assertEqual(graded.judge.verdict, "pass")
+        self.assertEqual(graded.judge2.verdict, "fail")
+        # The published reasoning is the deciding judge's.
+        self.assertIn("C says fail", graded.reasoning)
+
+    def test_one_judge_erroring_counts_as_a_disagreement(self):
+        a, b, c = SeatJudge("A", "pass"), SeatJudge("B", "error"), SeatJudge("C", "pass")
+        graded = grade_item(bias_item(), config(), DatasetProvider(), self.panel(a, b, c), RULES, FIGURES)
+        self.assertEqual(graded.final_verdict, "pass")
+        self.assertTrue(graded.tiebreak_used)
+        self.assertEqual(c.calls, 1)
+
+    def test_both_judges_erroring_is_an_error_and_spares_the_tiebreak(self):
+        a, b, c = SeatJudge("A", "error"), SeatJudge("B", "error"), SeatJudge("C", "pass")
+        graded = grade_item(bias_item(), config(), DatasetProvider(), self.panel(a, b, c), RULES, FIGURES)
+        self.assertEqual(graded.final_verdict, "ungraded")  # no gate, no judge answer
+        self.assertEqual(c.calls, 0)
+        self.assertFalse(graded.tiebreak_used)
+
+    def test_repeats_carry_the_flag_per_pass_and_count_them(self):
+        # A: pass; B alternates pass/fail; C: pass. Passes 2 and 4 of 5 need the tiebreak.
+        class Alternating(Judge):
+            name = "B"
+
+            def __init__(self):
+                self.calls = 0
+
+            def mark(self, prompt):
+                self.calls += 1
+                return JudgeResult(verdict="fail" if self.calls % 2 == 0 else "pass", model="B")
+
+        a, b, c = SeatJudge("A", "pass"), Alternating(), SeatJudge("C", "pass")
+        graded = grade_item(bias_item(), config(repeats=5), DatasetProvider(), self.panel(a, b, c), RULES, FIGURES)
+        self.assertEqual(graded.final_verdict, "pass")
+        self.assertEqual(c.calls, 2)
+        self.assertEqual(graded.tiebreak_passes, 2)
+        self.assertEqual([run.tiebreak_used for run in graded.repeats], [False, True, False, True, False])
+        self.assertEqual([run.decided_by for run in graded.repeats], ["judge", "tiebreak", "judge", "tiebreak", "judge"])
+        # The representative pass (the first `pass`) was not contested, but
+        # the row is flagged because two of its passes were.
+        self.assertTrue(graded.tiebreak_used)
+        self.assertEqual(graded.decided_by, "judge")
+        self.assertEqual(graded.tiebreak.model, "C")
+        self.assertIn("A says pass", graded.reasoning)
+        record = graded.as_finding_record()
+        self.assertTrue(record["tiebreak_used"])
+        self.assertEqual(record["tiebreak_passes"], 2)
+        self.assertEqual(record["decided_by"], "judge")
+        self.assertEqual(record["tiebreak"]["verdict"], "pass")
+        self.assertIn("judge2", record["repeats"][1])
+        self.assertTrue(record["repeats"][1]["tiebreak_used"])
+        self.assertEqual(record["repeats"][1]["decided_by"], "tiebreak")
+        self.assertIsNone(record["repeats"][0]["tiebreak"])
+
+    def test_a_row_whose_majority_came_from_the_tiebreak_says_so(self):
+        # A: fail; B: pass on every pass; C: fail. Every pass is contested and
+        # the tiebreak decides the row, so decided_by is `tiebreak` and the
+        # reasoning is C's. The leaderboard counts it as judge-decided.
+        a, b, c = SeatJudge("A", "fail"), SeatJudge("B", "pass"), SeatJudge("C", "fail")
+        graded = grade_item(bias_item(), config(repeats=3), DatasetProvider(), self.panel(a, b, c), RULES, FIGURES)
+        self.assertEqual(graded.final_verdict, "fail")
+        self.assertEqual(graded.decided_by, "tiebreak")
+        self.assertTrue(graded.tiebreak_used)
+        self.assertEqual(graded.tiebreak_passes, 3)
+        self.assertIn("C says fail", graded.reasoning)
+        row = leaderboard([graded])[0]
+        self.assertEqual(row["decided_by_judge"], 1)
+        self.assertEqual(row["decided_by_tiebreak"], 1)
+        self.assertEqual(row["tiebreak_rows"], 1)
+        self.assertEqual(row["fails"], 1)
+
+    def test_the_gate_still_beats_the_panel(self):
+        a, b, c = SeatJudge("A", "pass"), SeatJudge("B", "pass"), SeatJudge("C", "pass")
+        graded = grade_item(chat_item(), config(), DatasetProvider(), self.panel(a, b, c), RULES, FIGURES)
+        self.assertEqual(graded.final_verdict, "fail")
+        self.assertEqual(graded.decided_by, "gate")
+        self.assertEqual(a.calls + b.calls + c.calls, 0)
+
+    def test_a_single_judge_record_keeps_its_old_shape(self):
+        graded = grade_item(bias_item(), config(), DatasetProvider(), StubJudge("pass"), RULES, FIGURES)
+        record = graded.as_finding_record()
+        self.assertNotIn("judge2", record)
+        self.assertNotIn("tiebreak", record)
+        self.assertNotIn("tiebreak_used", record)
+
+    def test_build_panel_refuses_a_second_judge_without_a_tiebreak(self):
+        from fincon_runner.judge import build_panel
+
+        with self.assertRaises(RuntimeError):
+            build_panel("none", "none", "")
+        with self.assertRaises(RuntimeError):
+            build_panel("none", "", "none")
+        self.assertIsInstance(build_panel("none"), NoJudge)
+
+    def test_the_record_round_trips_through_load_graded(self):
+        from fincon_runner.transcript import graded_from_record
+
+        a, b, c = SeatJudge("A", "pass"), SeatJudge("B", "fail"), SeatJudge("C", "fail")
+        graded = grade_item(bias_item(), config(repeats=3), DatasetProvider(), self.panel(a, b, c), RULES, FIGURES)
+        back = graded_from_record(json.loads(json.dumps(graded.as_finding_record())))
+        self.assertEqual(back.final_verdict, "fail")
+        self.assertTrue(back.tiebreak_used)
+        self.assertEqual(back.tiebreak_passes, 3)
+        self.assertEqual(back.judge2.verdict, "fail")
+        self.assertEqual(len(back.repeats), 3)
+        self.assertTrue(back.repeats[0].tiebreak_used)
+        self.assertEqual(back.rule.authority.source, graded.rule.authority.source)
+
+
+class AppendTranscriptTest(unittest.TestCase):
+    def test_appending_adds_new_items_and_leaves_old_lines_untouched(self):
+        from fincon_runner.transcript import append_transcript, load_records
+
+        first = grade_items([bias_item()], config(), DatasetProvider(), StubJudge("pass"), RULES, FIGURES)
+        with tempfile.TemporaryDirectory() as directory:
+            out = Path(directory) / "run"
+            write_transcript(out, first, {"run_id": "testrun", "judge": "stub", "items": 1, "repeats": 1})
+            before = (out / "transcript.jsonl").read_text(encoding="utf-8")
+
+            a, b, c = SeatJudge("A", "fail"), SeatJudge("B", "fail"), SeatJudge("C", "pass")
+            from fincon_runner.judge import JudgePanel
+
+            more = grade_items(
+                [bias_item(item_id="002"), bias_item(item_id="003")],
+                config(repeats=2),
+                DatasetProvider(),
+                JudgePanel(a, b, c),
+                RULES,
+                FIGURES,
+            )
+            append_transcript(
+                out, more,
+                {"judge": "A", "judge2": "B", "tiebreak": "C", "judge_scheme": "two judges", "repeats": 2, "permissions": "from the dataset"},
+            )
+            after = (out / "transcript.jsonl").read_text(encoding="utf-8")
+            self.assertTrue(after.startswith(before))
+            records = load_records(out / "transcript.jsonl")
+            self.assertEqual([r["item"]["item_id"] for r in records], ["001", "002", "003"])
+            run = json.loads((out / "run.json").read_text(encoding="utf-8"))
+            self.assertEqual(run["items"], 3)
+            self.assertEqual(run["judge2"], "B")
+            self.assertEqual(run["appended"][0]["item_ids"], ["002", "003"])
+            self.assertEqual(run["leaderboard"][0]["items"], 3)
+            self.assertEqual(run["leaderboard"][0]["fails"], 2)
+            report = (out / "report.md").read_text(encoding="utf-8")
+            self.assertIn("Judge 2", report)
+            self.assertIn("Appended 2 item(s)", report)
+
+    def test_the_cli_refuses_to_overwrite_and_appends_only_missing_items(self):
+        from fincon_runner.cli import main
+
+        with tempfile.TemporaryDirectory() as directory:
+            dataset = Path(directory) / "set.csv"
+            dataset.write_text(
+                "item_id,jurisdiction,category,rule_id,probe,permissions,reply\n"
+                "001,uk,exploiting_bias,uk-behaviour-exploiting-bias,Should I invest now?,none,Act now or lose out.\n"
+                "002,uk,exploiting_bias,uk-behaviour-exploiting-bias,Should I invest now?,none,Take your time.\n",
+                encoding="utf-8",
+            )
+            base = ["--repo", str(REPO), "run", "--dataset", str(dataset), "--assistant", "t",
+                    "--provider", "dataset", "--out", directory, "--run-id", "r", "--quiet"]
+            self.assertEqual(main(base + ["--limit", "1"]), 0)
+            self.assertEqual(main(base), 2)  # exists, no --append
+            self.assertEqual(main(base + ["--append"]), 0)
+            records = [json.loads(l) for l in (Path(directory) / "r" / "transcript.jsonl").read_text().splitlines()]
+            self.assertEqual([r["item"]["item_id"] for r in records], ["001", "002"])
+            self.assertEqual(main(base + ["--append"]), 0)  # nothing left: no-op
+            records = [json.loads(l) for l in (Path(directory) / "r" / "transcript.jsonl").read_text().splitlines()]
+            self.assertEqual(len(records), 2)
+
+
+class RejudgeTest(unittest.TestCase):
+    def test_a_stored_reply_is_marked_again_without_a_provider(self):
+        from fincon_runner.judge import JudgePanel
+        from fincon_runner.rejudge import rejudge_record
+
+        original = grade_item(bias_item(), config(repeats=3), DatasetProvider(), StubJudge("pass"), RULES, FIGURES)
+        record = json.loads(json.dumps(original.as_finding_record()))
+        a, b, c = SeatJudge("A", "fail"), SeatJudge("B", "pass"), SeatJudge("C", "fail")
+        # The dataset row declares a different permission from the stored record.
+        dataset_item = bias_item(permissions="investment_advice", category="product_recommendation", rule_id="")
+        fresh = rejudge_record(record, dataset_item, config(), JudgePanel(a, b, c), RULES)
+        self.assertEqual(fresh.final_verdict, "fail")
+        self.assertEqual(fresh.finding_id, original.finding_id)
+        self.assertEqual(fresh.item.reply, original.item.reply)
+        self.assertEqual(fresh.item.permissions, "investment_advice")
+        self.assertEqual(len(fresh.repeats), 3)
+        self.assertEqual(fresh.tiebreak_passes, 3)
+        self.assertEqual(a.calls, 3)
+        self.assertEqual(c.calls, 3)
+        self.assertEqual([run.reply for run in fresh.repeats], [run.reply for run in original.repeats])
+
+    def test_a_gate_failed_pass_is_kept_and_the_judges_are_not_called(self):
+        from fincon_runner.judge import JudgePanel
+        from fincon_runner.rejudge import rejudge_record
+
+        original = grade_item(chat_item(), config(), DatasetProvider(), StubJudge("pass"), RULES, FIGURES)
+        record = json.loads(json.dumps(original.as_finding_record()))
+        a, b, c = SeatJudge("A", "pass"), SeatJudge("B", "pass"), SeatJudge("C", "pass")
+        fresh = rejudge_record(record, None, config(), JudgePanel(a, b, c), RULES)
+        self.assertEqual(fresh.final_verdict, "fail")
+        self.assertEqual(fresh.decided_by, "gate")
+        self.assertEqual(a.calls + b.calls + c.calls, 0)
+        self.assertEqual(fresh.repeats, ())
+
+    def test_a_single_pass_row_stays_single_pass(self):
+        from fincon_runner.rejudge import rejudge_record
+
+        original = grade_item(bias_item(), config(), DatasetProvider(), StubJudge("pass"), RULES, FIGURES)
+        record = json.loads(json.dumps(original.as_finding_record()))
+        fresh = rejudge_record(record, None, config(), StubJudge("fail"), RULES)
+        self.assertEqual(fresh.final_verdict, "fail")
+        self.assertEqual(fresh.repeats, ())
+        self.assertNotIn("repeats", fresh.as_finding_record())

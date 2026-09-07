@@ -13,6 +13,13 @@ The runner builds the prompt from 4 parts.
 
 The judge answers in JSON. A judge that answers anything else is recorded as an
 error, not as a pass, so a broken judge never turns into a clean leaderboard.
+
+Two-judge mode. `JudgePanel` holds judge A, judge B and a tiebreak judge. Every
+reply goes to A and B. When they give the same verdict, that is the verdict.
+When they differ, the tiebreak judge marks the reply and its verdict stands.
+All three answers are kept, plus a flag saying the tiebreak ran, so a reader
+can see which rows were contested. A and B are called one after the other,
+never at the same time, because they share one Ollama Cloud subscription.
 """
 
 from __future__ import annotations
@@ -20,6 +27,7 @@ from __future__ import annotations
 import json
 import os
 import re
+from dataclasses import dataclass
 
 from .endpoints import EndpointError, bedrock_chat, ollama_chat
 from .models import (
@@ -251,6 +259,32 @@ def parse_verdict(raw: str, model: str) -> JudgeResult:
     )
 
 
+@dataclass(frozen=True)
+class PanelVerdict:
+    """What the judging stage returned for one reply.
+
+    `judge` is judge A's answer (or the only judge's). `judge2` and `tiebreak`
+    are `None` under a single judge. `verdict` is the answer the pass uses and
+    `decider` is the result whose reasoning explains it.
+    """
+
+    verdict: str
+    judge: JudgeResult
+    judge2: JudgeResult | None = None
+    tiebreak: JudgeResult | None = None
+    tiebreak_used: bool = False
+
+    @property
+    def decider(self) -> JudgeResult:
+        if self.tiebreak_used and self.tiebreak is not None:
+            return self.tiebreak
+        return self.judge
+
+    @property
+    def is_panel(self) -> bool:
+        return self.judge2 is not None
+
+
 class Judge:
     """The interface every judge implements."""
 
@@ -258,6 +292,43 @@ class Judge:
 
     def mark(self, prompt: str) -> JudgeResult:
         raise NotImplementedError
+
+    def mark_panel(self, prompt: str) -> PanelVerdict:
+        """Mark once and wrap the answer. `JudgePanel` overrides this."""
+        result = self.mark(prompt)
+        return PanelVerdict(verdict=result.verdict, judge=result)
+
+
+class JudgePanel(Judge):
+    """Two judges and a tiebreak. See the module docstring for the rule.
+
+    A pass where A and B both fail to answer is an `error`: there is nothing to
+    break, and the tiebreak is not spent on it. `rejudge_errors.py` re-runs such
+    rows. A pass where one of them answers and the other does not is a
+    disagreement, and goes to the tiebreak.
+    """
+
+    def __init__(self, judge_a: Judge, judge_b: Judge, tiebreak: Judge):
+        self.judge_a = judge_a
+        self.judge_b = judge_b
+        self.tiebreak = tiebreak
+        self.name = f"{judge_a.name} + {judge_b.name}, tiebreak {tiebreak.name}"
+
+    def mark(self, prompt: str) -> JudgeResult:
+        return self.mark_panel(prompt).decider
+
+    def mark_panel(self, prompt: str) -> PanelVerdict:
+        a = self.judge_a.mark(prompt)
+        b = self.judge_b.mark(prompt)
+        a_ok = a.verdict in VALID_VERDICTS
+        b_ok = b.verdict in VALID_VERDICTS
+        if a_ok and b_ok and a.verdict == b.verdict:
+            return PanelVerdict(verdict=a.verdict, judge=a, judge2=b)
+        if not a_ok and not b_ok:
+            return PanelVerdict(verdict="error", judge=a, judge2=b)
+        c = self.tiebreak.mark(prompt)
+        verdict = c.verdict if c.verdict in VALID_VERDICTS else "error"
+        return PanelVerdict(verdict=verdict, judge=a, judge2=b, tiebreak=c, tiebreak_used=True)
 
 
 class NoJudge(Judge):
@@ -454,3 +525,19 @@ def build_judge(spec: str) -> Judge:
     if kind in ("bedrock", "ollama"):
         return EndpointJudge(kind, model)
     raise RuntimeError(f"unknown judge `{spec}`")
+
+
+def build_panel(judge: str, judge2: str = "", tiebreak: str = "") -> Judge:
+    """Build a single judge, or a `JudgePanel` when `judge2` is given.
+
+    A second judge without a tiebreak is refused: the rule needs a third voice
+    for the rows the first two disagree on, and a coin flip is not a judge.
+    """
+    first = build_judge(judge)
+    if not judge2:
+        if tiebreak:
+            raise RuntimeError("--tiebreak needs --judge2: a tiebreak breaks a disagreement between two judges")
+        return first
+    if not tiebreak:
+        raise RuntimeError("--judge2 needs --tiebreak: the rows the two judges disagree on need a third judge")
+    return JudgePanel(first, build_judge(judge2), build_judge(tiebreak))

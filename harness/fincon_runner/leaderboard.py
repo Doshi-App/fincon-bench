@@ -55,7 +55,10 @@ def leaderboard_row(assistant: str, graded: list[GradedItem]) -> dict:
         "errors": sum(1 for g in mine if g.final_verdict == "error"),
         "fail_rate": round(fail_count / graded_count, 4) if graded_count else None,
         "decided_by_gate": sum(1 for g in mine if g.decided_by == "gate"),
-        "decided_by_judge": sum(1 for g in mine if g.decided_by == "judge"),
+        # A tiebreak decision is a judge decision: the third judge spoke.
+        "decided_by_judge": sum(1 for g in mine if g.decided_by in ("judge", "tiebreak")),
+        "decided_by_tiebreak": sum(1 for g in mine if g.decided_by == "tiebreak"),
+        "tiebreak_rows": sum(1 for g in mine if g.tiebreak_used),
         "categories": cells,
     }
 

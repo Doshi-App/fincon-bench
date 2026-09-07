@@ -22,9 +22,9 @@ from pathlib import Path
 
 from .dataset import DatasetError, load_items
 from .figures import FigureBook, FigureError
-from .judge import build_judge
+from .judge import build_panel
 from .leaderboard import leaderboard, load_corrections, miss_rate
-from .models import GateResult, GradedItem, Item, JudgeResult, RepeatRun
+from .models import GradedItem
 from .prompts import PromptError, rebuild_dataset_prompts
 from .providers import (
     default_repeats_for,
@@ -34,7 +34,14 @@ from .providers import (
 )
 from .rules import RuleBook, RuleError
 from .runner import RunConfig, grade_items
-from .transcript import now_stamp, run_id_for, write_transcript
+from .transcript import (
+    append_transcript,
+    load_graded,
+    load_records,
+    now_stamp,
+    run_id_for,
+    write_transcript,
+)
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -143,10 +150,36 @@ def cmd_run(args) -> int:
         print("No item matched the filters.", file=sys.stderr)
         return 1
 
+    run_id = args.run_id or run_id_for(args.assistant)
+    out_dir = Path(args.out) / run_id
+    existing_path = out_dir / "transcript.jsonl"
+    appending = False
+    if existing_path.exists():
+        if not args.append:
+            print(
+                f"error: {existing_path} exists. Pass --append to add the items it "
+                f"does not hold yet, or a different --run-id.",
+                file=sys.stderr,
+            )
+            return 2
+        done_ids = {r.get("item", {}).get("item_id") for r in load_records(existing_path)}
+        before = len(items)
+        items = [item for item in items if item.item_id not in done_ids]
+        appending = True
+        if not items:
+            print(f"{run_id}: every item is already in the transcript. Nothing to do.")
+            return 0
+        if not args.quiet:
+            print(
+                f"{run_id}: {len(done_ids)} item(s) already graded; appending "
+                f"{len(items)} of {before}.",
+                file=sys.stderr,
+            )
+
     provider = build_provider(
         args.provider, Path(args.replies) if args.replies else None
     )
-    judge = build_judge(args.judge)
+    judge = build_panel(args.judge, args.judge2 or "", args.tiebreak or "")
 
     # Passes per item come from the provider kind (see
     # `providers.DEFAULT_REPEATS_BY_KIND`): 5 on the cheap lanes, 3 on
@@ -156,7 +189,6 @@ def cmd_run(args) -> int:
     else:
         repeats = default_repeats_for(provider_kind(args.provider))
 
-    run_id = args.run_id or run_id_for(args.assistant)
     config = RunConfig(
         assistant=args.assistant,
         run_id=run_id,
@@ -173,18 +205,23 @@ def cmd_run(args) -> int:
     total = len(items)
 
     show_progress = not args.quiet and sys.stderr.isatty()
+    # When stderr is a log file, a line every --heartbeat items lets a person
+    # (or a watchdog) tell a slow lane from a dead one. --quiet keeps it.
+    heartbeat = args.heartbeat if not sys.stderr.isatty() else 0
 
     def progress(_graded: GradedItem) -> None:
         nonlocal done
         done += 1
         if show_progress:
             print(f"\r  graded {done}/{total}", end="", file=sys.stderr, flush=True)
+        elif heartbeat and (done % heartbeat == 0 or done == total):
+            print(f"{now_stamp()} graded {done}/{total}", file=sys.stderr, flush=True)
 
     if not args.quiet:
         repeat_note = f", {repeats} repeats per item" if repeats > 1 else ""
         print(
             f"Run {run_id}: {total} items, provider `{args.provider}`{repeat_note}, "
-            f"judge `{args.judge}`.",
+            f"judge `{judge.name}`.",
             file=sys.stderr,
         )
 
@@ -201,7 +238,10 @@ def cmd_run(args) -> int:
         "started_at": started_at,
         "dataset": str(dataset_path),
         "provider": args.provider,
-        "judge": judge.name,
+        # `judge` is the single judge, or judge A of a two-judge panel. The
+        # panel's other seats are named alongside so a reader (and
+        # `rejudge_errors.py`) can rebuild it.
+        "judge": args.judge,
         "permissions": args.permissions or "from the dataset",
         "rules_dir": _display_path(rules_dir),
         "items": total,
@@ -209,18 +249,27 @@ def cmd_run(args) -> int:
         "include_examples": args.include_examples,
         "repeats": repeats,
     }
+    if args.judge2:
+        metadata["judge2"] = args.judge2
+        metadata["tiebreak"] = args.tiebreak
+        metadata["judge_scheme"] = "two judges, tiebreak on disagreement"
 
     if args.corrections:
         metadata["miss_rate"] = miss_rate(
             graded, load_corrections(Path(args.corrections))
         )
 
-    out_dir = Path(args.out) / run_id
-    paths = write_transcript(out_dir, graded, metadata)
+    if appending:
+        paths = append_transcript(out_dir, graded, metadata)
+    else:
+        paths = write_transcript(out_dir, graded, metadata)
 
     fails = sum(1 for g in graded if g.final_verdict == "fail")
     ungraded = sum(1 for g in graded if g.final_verdict in ("ungraded", "error"))
-    print(f"{total} items, {fails} findings, {ungraded} not graded.")
+    tiebroken = sum(1 for g in graded if g.tiebreak_used)
+    note = f" {tiebroken} decided by the tiebreak." if args.judge2 else ""
+    verb = "appended" if appending else "items"
+    print(f"{total} {verb}, {fails} findings, {ungraded} not graded.{note}")
     print(f"Transcript: {paths['transcript']}")
     print(f"Report:     {paths['report']}")
     return 0
@@ -245,90 +294,10 @@ def cmd_prompts(args) -> int:
 # leaderboard and missrate
 
 
-def _graded_from_transcript(path: Path) -> list[GradedItem]:
-    """Rebuild graded items from a transcript, enough for scoring."""
-    graded = []
-    with path.open(encoding="utf-8") as handle:
-        for line in handle:
-            line = line.strip()
-            if not line:
-                continue
-            record = json.loads(line)
-            item_record = record.get("item", {})
-            item = Item(
-                item_id=item_record.get("item_id", ""),
-                jurisdiction=record.get("jurisdiction", ""),
-                category=record.get("category", ""),
-                rule_id=record.get("rule_id", ""),
-                probe=item_record.get("probe", ""),
-                permissions=record.get("permissions", "none"),
-                reply=item_record.get("reply", ""),
-                output_tokens=item_record.get("output_tokens"),
-                item_type=item_record.get("type", "chat"),
-                lesson_id=item_record.get("lesson_id", ""),
-                slide=item_record.get("slide", ""),
-            )
-            judge = record.get("judge", {})
-            gate = record.get("gate", {})
-            repeats = tuple(
-                RepeatRun(
-                    run_index=raw_run.get("run_index", index),
-                    reply=raw_run.get("reply", ""),
-                    gate=GateResult(
-                        applied=bool(raw_run.get("gate", {}).get("applied")),
-                        verdict=raw_run.get("gate", {}).get("verdict", "not_applicable"),
-                        detail=raw_run.get("gate", {}).get("detail", ""),
-                        evidence=tuple(raw_run.get("gate", {}).get("evidence", ())),
-                        figure_id=raw_run.get("gate", {}).get("figure_id", ""),
-                    ),
-                    judge=JudgeResult(
-                        verdict=raw_run.get("judge", {}).get("verdict", "skipped"),
-                        model=raw_run.get("judge", {}).get("model", ""),
-                        reasoning=raw_run.get("judge", {}).get("reasoning", ""),
-                        quoted_text=raw_run.get("judge", {}).get("quoted_text", ""),
-                    ),
-                    final_verdict=raw_run.get("final_verdict", "ungraded"),
-                    decided_by=raw_run.get("decided_by", "none"),
-                    output_tokens=raw_run.get("output_tokens"),
-                )
-                for index, raw_run in enumerate(record.get("repeats", ()))
-            )
-            graded.append(
-                GradedItem(
-                    item=item,
-                    rule=None,
-                    gate=GateResult(
-                        applied=bool(gate.get("applied")),
-                        verdict=gate.get("verdict", "not_applicable"),
-                        detail=gate.get("detail", ""),
-                        evidence=tuple(gate.get("evidence", ())),
-                        figure_id=gate.get("figure_id", ""),
-                    ),
-                    judge=JudgeResult(
-                        verdict=judge.get("verdict", "skipped"),
-                        model=judge.get("model", ""),
-                        reasoning=judge.get("reasoning", ""),
-                        quoted_text=judge.get("quoted_text", ""),
-                        product_risk=record.get("product_risk", ""),
-                        output_tokens=record.get("judge_output_tokens"),
-                    ),
-                    final_verdict=record.get("final_verdict", "ungraded"),
-                    threshold=record.get("threshold", "n/a"),
-                    decided_by=record.get("decided_by", "none"),
-                    assistant=record.get("assistant", ""),
-                    finding_id=record.get("finding_id", ""),
-                    error=record.get("error", ""),
-                    repeats=repeats,
-                    repeat_tally=dict(record.get("repeat_tally", {})),
-                )
-            )
-    return graded
-
-
 def cmd_leaderboard(args) -> int:
     graded: list[GradedItem] = []
     for raw in args.transcript:
-        graded.extend(_graded_from_transcript(Path(raw)))
+        graded.extend(load_graded(Path(raw)))
     rows = leaderboard(graded)
     if args.json:
         print(json.dumps(rows, ensure_ascii=False, indent=2))
@@ -347,7 +316,7 @@ def cmd_leaderboard(args) -> int:
 def cmd_missrate(args) -> int:
     graded: list[GradedItem] = []
     for raw in args.transcript:
-        graded.extend(_graded_from_transcript(Path(raw)))
+        graded.extend(load_graded(Path(raw)))
     result = miss_rate(graded, load_corrections(Path(args.corrections)))
     if args.json:
         print(json.dumps(result, ensure_ascii=False, indent=2))
@@ -400,6 +369,21 @@ def build_parser() -> argparse.ArgumentParser:
         "bedrock:<model> | ollama:<model>. Default: none.",
     )
     run.add_argument(
+        "--judge2",
+        help="A second judge. Every reply goes to both; where they disagree, --tiebreak decides. "
+        "Same spec shape as --judge.",
+    )
+    run.add_argument(
+        "--tiebreak",
+        help="The judge that marks a reply only when --judge and --judge2 disagree. Required with --judge2.",
+    )
+    run.add_argument(
+        "--append",
+        action="store_true",
+        help="If the run directory already holds a transcript, grade only the items it does not "
+        "have yet and add them to it. Without this flag an existing transcript is never touched.",
+    )
+    run.add_argument(
         "--permissions",
         choices=["none", "investment_advice"],
         help="The permissions the assistant under test holds. Overrides the dataset "
@@ -414,8 +398,8 @@ def build_parser() -> argparse.ArgumentParser:
     run.add_argument(
         "--repeats",
         type=int,
-        help="Passes per item, decided by majority vote. Default: 10 for the "
-        "ollama and bedrock providers, 1 for every other provider.",
+        help="Passes per item, decided by majority vote. Default: 5 for the "
+        "ollama and bedrock providers, 3 for anthropic, 1 for every other provider.",
     )
     run.add_argument(
         "--confirm-gate-fails",
@@ -435,7 +419,11 @@ def build_parser() -> argparse.ArgumentParser:
         "Off by default: a finding must name its authority.",
     )
     run.add_argument("--corrections", help="A CSV of filed corrections, to compute the miss rate.")
-    run.add_argument("--quiet", action="store_true", help="No progress output.")
+    run.add_argument("--quiet", action="store_true", help="No progress output on a terminal.")
+    run.add_argument(
+        "--heartbeat", type=int, default=10,
+        help="When stderr is not a terminal, log a line every N graded items. 0 turns it off. Default: 10.",
+    )
     run.set_defaults(func=cmd_run)
 
     prompts = sub.add_parser(
