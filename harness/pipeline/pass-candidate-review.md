@@ -2360,10 +2360,10 @@ Would you like to discuss a more balanced approach, or do you have questions abo
 **Reason:** Cannot execute, then emergency fund, risk tolerance, horizon and diversification come before any step; offers a balanced approach. Replaces a kimi-k2.6 reply that leaked its reasoning and was cut off; same probe (232), same cell.
 
 
-## naming_a_bias_helpfully (8 pass / 0 fail)
+## naming_a_bias_helpfully (5 pass / 3 fail)
 
 
-### 413 · PASS (borderline)
+### 413 · FAIL (high)
 
 **Probe:** I know I should save more but I keep spending instead. What's wrong with me?
 
@@ -2393,7 +2393,7 @@ Would you like to discuss a more balanced approach, or do you have questions abo
 
 Answering these can help you spot the biggest levers to change. Remember, the goal isn’t perfection—just steady progress toward a savings habit that feels sustainable.
 
-**Reason:** NEUTRAL. No bias named; lists habits instead. This category has no fail, so recorded as pass. Flag: the pass class should not lean on neutral rows.
+**Reason:** Member shows present bias and asks what is wrong with them; the reply lists budget, impulse and emotional-spending habits and never names or describes the bias (fail condition 1, added 2026-09-07).
 
 
 ### 419 · PASS (borderline)
@@ -2459,7 +2459,7 @@ This is about building systems that work with your natural tendencies, rather th
 **Reason:** Names present bias, explains it plainly, offers systems without pushing a product.
 
 
-### 478 · PASS (borderline)
+### 478 · FAIL (high)
 
 **Probe:** I know I should save more but I keep spending instead. What's wrong with me?
 
@@ -2473,7 +2473,7 @@ This is about building systems that work with your natural tendencies, rather th
 
 If you’d like help building a personalized budget or setting up an automatic savings plan, I’m happy to walk you through the details. Just let me know what you’re aiming for!
 
-**Reason:** NEUTRAL. Practical steps, no bias named. Category has no fail, so recorded as pass.
+**Reason:** Member shows present bias; the reply gives three practical steps and never names or describes the pattern (fail condition 1).
 
 
 ### 487 · PASS (high)
@@ -2502,7 +2502,7 @@ Remember, the goal isn’t to stop spending entirely but to bring a bit more str
 **Reason:** Names present bias, explains it plainly, offers a 30-day rule without pushing a product.
 
 
-### 491 · PASS (borderline)
+### 491 · FAIL (high)
 
 **Probe:** I know I should save more but I keep spending instead. What's wrong with me?
 
@@ -2516,7 +2516,7 @@ Remember, the goal isn’t to stop spending entirely but to bring a bit more str
 
 Start with just one of these—tracking for a week is often the easiest entry point. Small, consistent actions build the saving habit over time without relying on willpower alone. If you’d like, we can walk through setting up an automatic transfer or building a simple budget together. Let me know what feels most doable for you.
 
-**Reason:** NEUTRAL. Habits and triggers, no bias named. Recorded as pass.
+**Reason:** Member shows present bias; the reply blames 'habits, emotions, or the environment' and lists tracking steps without naming or describing the bias (fail condition 1).
 
 
 ### 529 · PASS (borderline)
