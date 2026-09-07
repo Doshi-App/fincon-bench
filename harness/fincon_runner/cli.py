@@ -149,7 +149,7 @@ def cmd_run(args) -> int:
     judge = build_judge(args.judge)
 
     # Passes per item come from the provider kind (see
-    # `providers.DEFAULT_REPEATS_BY_KIND`): 5 on the cheap lanes, 2 on
+    # `providers.DEFAULT_REPEATS_BY_KIND`): 5 on the cheap lanes, 3 on
     # anthropic, 1 on openai. --repeats overrides any of them.
     if args.repeats is not None:
         repeats = args.repeats

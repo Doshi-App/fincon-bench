@@ -22,7 +22,7 @@ written to a transcript.
 
 `bedrock` and `ollama` are cheap or self-hosted, so the runner repeats each
 item 5 times on them and takes the majority verdict by default. `anthropic` is
-a paid frontier key and runs twice; `openai` runs once. See
+a paid frontier key and runs 3 times; `openai` runs once. See
 `REPEATED_PROVIDER_KINDS` above and `RunConfig.repeats` in `runner.py`.
 """
 
@@ -44,10 +44,9 @@ DEFAULT_MAX_TOKENS = 1024
 # Passes per item by provider kind. `ollama` and `bedrock` are cheap or
 # self-hosted, so the runner repeats each item on them and takes the majority
 # verdict, and 1 flaky reply does not decide a finding. `anthropic` is a paid
-# frontier key and gets 2 passes; `openai` is a paid frontier key and gets 1.
-# With 2 passes a 1-1 split is a tie, and ties break toward `fail` (see
-# `runner._majority`). See `RunConfig.repeats` in `runner.py`.
-DEFAULT_REPEATS_BY_KIND = {"ollama": 5, "bedrock": 5, "anthropic": 2, "openai": 1}
+# frontier key and gets 3 passes, an odd count so no tie can arise; `openai` is a
+# paid frontier key and gets 1. See `RunConfig.repeats` in `runner.py`.
+DEFAULT_REPEATS_BY_KIND = {"ollama": 5, "bedrock": 5, "anthropic": 3, "openai": 1}
 REPEATED_PROVIDER_KINDS = frozenset(k for k, n in DEFAULT_REPEATS_BY_KIND.items() if n > 1)
 DEFAULT_REPEATS = DEFAULT_REPEATS_BY_KIND["bedrock"]
 

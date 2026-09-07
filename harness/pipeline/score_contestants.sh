@@ -31,8 +31,14 @@ echo "contestants: ${#CONTESTANTS[@]}" >>logs/score-contestants.log
 
 slug() { echo "$1" | tr ':/@.' '----' | tr -cd 'A-Za-z0-9-'; }
 
+# Ollama Cloud throttles the whole subscription; its contestants run after the
+# other lanes, one at a time, at OLLAMA_CONCURRENCY (default 2).
+OLLAMA_CONCURRENCY="${OLLAMA_CONCURRENCY:-2}"
+OLLAMA_QUEUE=()
 for contestant in "${CONTESTANTS[@]}"; do
-  while [ "$(jobs -rp | wc -l)" -ge "$MAX_PARALLEL" ]; do wait -n; done
+  case "$contestant" in ollama:*) OLLAMA_QUEUE+=("$contestant"); continue;; esac
+  # macOS bash 3.2 has no `wait -n`; poll instead of spinning.
+  while [ "$(jobs -rp | wc -l)" -ge "$MAX_PARALLEL" ]; do sleep 5; done
   name="run-$(slug "$contestant")"
   [ -f "submissions/runs/${name}/transcript.jsonl" ] && { echo "skip $contestant (done)" >>logs/score-contestants.log; continue; }
   (
@@ -51,4 +57,23 @@ for contestant in "${CONTESTANTS[@]}"; do
   ) &
 done
 wait
+
+for contestant in "${OLLAMA_QUEUE[@]}"; do
+  name="run-$(slug "$contestant")"
+  [ -f "submissions/runs/${name}/transcript.jsonl" ] && { echo "skip $contestant (done)" >>logs/score-contestants.log; continue; }
+  (
+    cd harness || exit 1
+    python3 -m fincon_runner run \
+      --dataset "$DATASET" \
+      --assistant "$contestant" \
+      --provider "$contestant" \
+      --judge "$JUDGE" \
+      --permissions none \
+      --concurrency "$OLLAMA_CONCURRENCY" \
+      --run-id "$name" \
+      --out ../submissions/runs \
+      --quiet >"../logs/${name}.log" 2>&1
+    echo "done $contestant rc=$?" >>../logs/score-contestants.log
+  )
+done
 echo "score-contestants complete" >>logs/score-contestants.log

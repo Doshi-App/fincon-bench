@@ -22,15 +22,15 @@ flowchart TB
   subgraph P1["PASS 1 — choose the judge (the replies already exist)"]
     direction LR
     R["Rules<br/>15 categories x 4 jurisdictions<br/>each cites a clause"]
-    D["Meta-eval set<br/>394 rows, written by hand<br/>probe filled, reply filled, label blank"]
-    H["Human labellers<br/>2 people read the rule<br/>and mark pass or fail"]
-    M["Candidate judges<br/>5 models mark the same rows<br/>with no sight of the labels"]
-    J["THE JUDGE<br/>the model that agrees most<br/>with the two people"]
+    D["Meta-eval set<br/>544 rows: 274 written by hand, 270 model-written<br/>probe filled, reply filled, label kept apart"]
+    H["Labellers<br/>read the rule and mark pass or fail<br/>two blind passes, disagreements adjudicated"]
+    M["Candidate judges<br/>28 models mark the same rows<br/>with no sight of the labels"]
+    J["THE JUDGE<br/>the model that agrees most<br/>with the labels"]
     R -->|"define a breach"| D
-    D -->|"all 394 rows"| H
-    D -->|"all 394 rows"| M
+    D -->|"424 labelled rows"| H
+    D -->|"the same 424 rows"| M
     H -->|"gold labels"| J
-    M -->|"5 label sets"| J
+    M -->|"28 label sets"| J
   end
 
   subgraph P2["PASS 2 — score the assistants (the replies do not exist yet)"]
@@ -56,7 +56,7 @@ A thick blue border marks a step a person does. Everything else is a model. Noth
 Two notes on who grades whom:
 
 - **Doshi FCP is a contestant, never the judge.** Doshi holds no advice permission, so Doshi FCP is scored against the stricter 2-condition test, the same as GPT, Grok and Claude. Only the bank assistant gets the 3-condition test, and only because it holds the permission. Doshi FCP has no leaderboard row yet. When it runs, it will not appear as a single row: it runs the same models already on this leaderboard through the harness in this repo, and the result reports the uplift Doshi FCP adds on top of each base model. That harness — the one in this repository — is the only evaluation tool used anywhere in this benchmark.
-- **Pass 1 cannot detect self-preference.** Every reply in the meta-eval set is written by a person, so no candidate judge has anything of its own to recognise. A judge can win pass 1 cleanly and still be soft on its own replies in pass 2. No assistant grades its own leaderboard row.
+- **Pass 1 guards against self-preference by exclusion.** 274 replies in the meta-eval set are written by a person and 270 by models. When a candidate judge is scored, the rows its own model family wrote are left out (`score_judges.py`, `own_replies_skipped`), so no judge is scored on its own writing. A judge can still be soft on its own replies in pass 2, so no assistant grades its own leaderboard row.
 
 See `docs/method.md` for how a run is scored and `docs/rubric.md` for the finding categories.
 
@@ -105,7 +105,7 @@ fincon-bench/
                      judges/  phase 1, one directory per candidate judge
                      runs/    phase 2, one directory per scored assistant
   datasets/
-    meta-eval.csv         the meta-eval set: 394 probes with replies, labels blank
+    meta-eval.csv         the meta-eval set: 544 probes with replies; labels live in harness/pipeline
     benchmark-open.csv    the main evaluation set: 275 probes, no replies, no labels
     benchmark-holdout.csv the future-gated seed set: 119 probes, no replies, no labels
 ```
@@ -143,9 +143,9 @@ A rule lands only by pull request. The pull request must attach the citation. On
 
 ## The dataset
 
-The benchmark uses one set of 394 probes, applied in two phases.
+The benchmark uses one set of 394 probes, applied in two phases, plus 150 model-written replies that exist only for phase 1.
 
-**Phase 1 — choose the judge (meta-eval).** The file `datasets/meta-eval.csv` holds 394 probes. Each probe has a pre-written reply. Human labellers mark each reply pass or fail. Five candidate judge models also mark each reply. The model with the best macro-F1 against the human labels becomes the judge.
+**Phase 1 — choose the judge (meta-eval).** The file `datasets/meta-eval.csv` holds 544 rows: the 394 probes with a pre-written reply (274 written by hand, 120 by a model), plus 150 rows whose replies were written by leaderboard models in the 2026-08-13 run and drawn one per category and jurisdiction. 424 rows carry a label (`harness/pipeline/human-labels-claude.csv`, 258 pass / 166 fail): the 274 hand-written rows and the 150 model-written rows, each labelled by two independent blind passes with disagreements adjudicated against the rule text. Candidate judges mark the same 424 rows. The model with the best macro-F1 against the labels becomes the judge; `results/judge_selection.csv` carries the 95 percent bootstrap intervals, and a winner is not declared where the leading intervals overlap.
 
 **Phase 2 — score the assistants (benchmark).** The same 394 probes are reused, but the reply column is removed. The runner sends each probe to each assistant. Each assistant produces a reply. The judge scores each reply pass or fail. The result is a pass/fail matrix on the leaderboard. The full benchmark set is the union of `benchmark-open.csv` and `benchmark-holdout.csv`.
 

@@ -86,7 +86,7 @@ differently.
 | Provider | Passes per item | Why |
 |---|---|---|
 | `ollama`, `bedrock` | 5 (default) | Cheap enough to run several times. A model on these hosts can also be flakier reply to reply, so 1 pass is not enough to trust. |
-| `anthropic` | 2 | A paid frontier call, run twice so one odd reply is visible. A 1-1 split is a tie and resolves to `fail` for a person to look at. |
+| `anthropic` | 3 | A paid frontier call, run 3 times so one odd reply cannot decide the row and no tie can arise. |
 | `openai` and every other provider | 1 | A paid frontier call. Extra passes would cost as much again for little gain in trust. |
 
 For a repeated item, the runner runs the full pipeline — reply, gate, judge —

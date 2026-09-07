@@ -7,7 +7,7 @@ class DefaultRepeatsTest(unittest.TestCase):
     def test_passes_per_provider_kind(self):
         self.assertEqual(default_repeats_for("bedrock"), 5)
         self.assertEqual(default_repeats_for("ollama"), 5)
-        self.assertEqual(default_repeats_for("anthropic"), 2)
+        self.assertEqual(default_repeats_for("anthropic"), 3)
         self.assertEqual(default_repeats_for("openai"), 1)
         self.assertEqual(default_repeats_for("http"), 1)
 

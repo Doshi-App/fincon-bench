@@ -470,12 +470,12 @@ Against an inter-labeller reference line rather than against truth, following He
 
 ### 7.3 The procedure
 
-1. All 394 rows in `meta-eval.csv` carry a pre-written reply.
-2. Two human labellers mark each row pass or fail independently, working from the rule and the rubric.
-3. Disagreements are resolved by discussion, and the agreed label is recorded as `human_label`. The pre-resolution labels supply the inter-labeller reference line.
-4. Candidate judge models mark all 394 rows with no sight of the human labels: GPT-5.6 Sol, GPT-5.6 Terra, GPT-5.6 Luna, Claude Opus 5, Claude Sonnet 5, Gemini 2.5 Pro, Grok 4.5, Llama 4 Maverick, Qwen3-235B-A22B, DeepSeek-V3, Mistral Large 3, GLM-4.5.
-5. Macro F1 per category is computed for each candidate against `human_label`.
-6. The best-agreeing candidate becomes the benchmark judge.
+1. All 544 rows in `meta-eval.csv` carry a pre-written reply: 274 written by hand, 120 written by a model to give the pass class coverage, and 150 written by leaderboard models in the 2026-08-13 run and drawn one per category and jurisdiction.
+2. The 274 hand-written rows and the 150 model-written rows are labelled pass or fail by two independent blind passes, working from the rule and the rubric. In v1.2 the passes are model-assisted and recorded as such.
+3. Disagreements are adjudicated against the rule text and the adjudication is recorded in the labels file. The pre-adjudication agreement (271 of 274 on the hand-written rows, 142 of 150 on the model-written rows) supplies the inter-labeller reference line.
+4. Candidate judge models mark the 424 labelled rows with no sight of the labels. A judge is not scored on rows its own model family wrote. In v1.2 there were 28 candidates: 14 through Bedrock, 9 through Ollama Cloud, 3 through the Anthropic API and 2 through the OpenAI API (`harness/pipeline/select_judge.sh`).
+5. Macro F1 is computed for each candidate against the labels, with a 95 percent bootstrap interval over 2,000 resamples of the rows.
+6. The best-agreeing candidate becomes the benchmark judge, unless its interval overlaps the runner-up's, in which case the table does not name a winner and the choice is made on stated secondary criteria (coverage, then running cost) and recorded.
 
 The human labels are never published. A candidate judge cannot read them before scoring, and neither can a future submitter.
 
@@ -483,17 +483,17 @@ The human labels are never published. A candidate judge cannot read them before 
 
 | Quantity | v1 value |
 |---|---|
-| Rows labelled by human labellers | 0 of 394 |
-| Inter-labeller agreement | Not yet measured |
-| Candidate judge runs completed | 0 of 5 |
-| Macro F1 per category, per candidate | Not yet measured |
-| Judge selected | None |
+| Rows labelled | 424 of 544 (v1.2, 2026-09-07): 258 pass, 166 fail |
+| Inter-labeller agreement | 271 of 274 hand-written rows, 142 of 150 model-written rows, before adjudication |
+| Candidate judge runs completed | 28 of 28, 424 rows each |
+| Macro F1 overall, per candidate | `results/judge_selection.csv`, with intervals; leader 0.958 (0.94 to 0.98) |
+| Judge selected | Not yet declared: five candidates overlap at the top |
 
 ### 7.5 The sample-size problem, stated in advance
 
 Our per-category sample will be small, and we would rather state the number now than have it noticed later.
 
-HealthBench reports 60,896 meta-examples, averaging 1,791 per criterion, with a minimum of 1,072. FinCon Bench has 394 items across 15 categories — between 22 and 44 rows per category. That is two orders of magnitude smaller.
+HealthBench reports 60,896 meta-examples, averaging 1,791 per criterion, with a minimum of 1,072. FinCon Bench has 424 labelled items across 15 categories — between 24 and 47 rows per category. That is two orders of magnitude smaller.
 
 The consequence is specific: a macro F1 computed on 14 rows has a confidence interval wide enough to swallow the difference between two candidate judges. Version v2 will report the interval alongside the point estimate and will not claim a winner where the intervals overlap. If they all overlap, the honest finding is that this set cannot distinguish these five judges, and the fix is more labelled rows rather than a firmer-sounding sentence.
 
@@ -526,7 +526,7 @@ Separately, recall against the filed corrections, reported over the 254 complian
 
 The first run, executed 2026-08-12/13. It is a run of the machinery, not the run that settles an ordering.
 
-**Phase 1 — judge selection.** 100 of the 274 meta-eval rows carry a hand label (92 fail, 8 pass). 17 candidate judges marked those rows through the `dataset` provider, so the replies and the rubric were identical across candidates and only the judge varied. `mistral-large-3-675b` won on macro-F1 at 0.8194, with Cohen's kappa 0.639 and MCC 0.640, ahead of `claude-sonnet-4-6` at 0.7606. Two degenerate baselines were scored alongside the candidates: always-fail reaches 92 per cent accuracy on this label distribution and 0.000 kappa, which is why section 7 selects on macro-F1 and reports kappa, and does not report accuracy.
+**Phase 1 — judge selection (v1.1).** 100 of the 274 meta-eval rows carried a hand label (92 fail, 8 pass); that file was never published and has since been lost. 17 candidate judges marked those rows through the `dataset` provider, so the replies and the rubric were identical across candidates and only the judge varied. `mistral-large-3-675b` won on macro-F1 at 0.8194, with Cohen's kappa 0.639 and MCC 0.640, ahead of `claude-sonnet-4-6` at 0.7606. Two degenerate baselines were scored alongside the candidates: always-fail reaches 92 per cent accuracy on this label distribution and 0.000 kappa, which is why section 7 selects on macro-F1 and reports kappa, and does not report accuracy.
 
 **Phase 2 — the leaderboard.** 53 models were sent the 191 open probes under the 2-condition test, and the phase 1 winner marked every reply. 51 ran cleanly; 2 are excluded for reasons that are not about the model (one billing, one rate limit). Of the 51, 3 pairs are the same weights served through 2 different inference providers (Bedrock and Ollama Cloud) and are merged into 1 row each, averaging the 2 rates — see 8.4.2 — leaving 48 ranked rows. Pass rates run from 76.7 per cent to 42.0 per cent. The full per-model table is `results/leaderboard.csv`, and `results/model_outputs.csv` carries all 9,741 model-item rows, unmerged, with the reply and the judge's reasoning for each.
 
@@ -538,9 +538,23 @@ Five things, each of which would change the table if addressed.
 2. **The serving inference provider moves the score.** Mistral Large 3 675B was run twice, on two inference providers, with the same weights, probes, prompt and judge. It scored 65.4 per cent on one and 59.6 on the other — 5.8 points, wider than the gap between most neighbouring rows. Whatever produces it (sampling defaults, serving configuration, quantisation) is not controlled for here, and it means **a row identifies a model *as served*, not a model.** Rather than publish the 2 inference providers as 2 separately ranked rows, `results/leaderboard.csv` folds an exact same-weights pair like this into 1 row and averages the 2 rates — GPT-OSS 120B and 20B get the same treatment. A different point release of the same model family on each inference provider is a different test, not the same model twice, and stays as 2 rows. The average hides the 5.8-point spread it is built from, so two people benchmarking "the same model" on different inference providers should still expect to disagree by about that much.
 3. **The frontier hosted models are missing.** The run reached models through two inference providers. The newest closed frontier models were not available on the account used — some by entitlement, some by billing — so the leading proprietary systems are absent and the strongest results here come from open-weight models. This is a statement about the account, not about the field.
 4. **The judge agrees with people at kappa 0.64.** That is substantial agreement, not near-perfect. Every leaderboard number inherits it, and a judge that disagrees with a labeller on roughly one contested row in three will move a model's rate by more than the distance between adjacent rows.
-5. **The pass class rests on 8 rows.** Of 100 labelled rows, 8 are pass. Every pass-side precision and recall in section 7, and therefore the choice of judge itself, stands on those 8. This is the single cheapest thing to fix and the one that would firm up the most.
+5. **The pass class rests on 8 rows.** Of 100 labelled rows, 8 are pass. Every pass-side precision and recall in section 7, and therefore the choice of judge itself, stands on those 8. Fixed in v1.2: see 8.5.
 
 ---
+
+### 8.5 What v1.2 adds (2026-09-07): the judge re-selected on 424 rows
+
+The v1.1 judge choice rested on 100 rows, 8 of them pass, and the file behind it was never published and is lost. Version v1.2 rebuilt the selection set and re-ran every candidate.
+
+**The set.** 424 labelled rows: the 274 hand-written rows and 150 replies written by leaderboard models in the 2026-08-13 run, drawn one per category and jurisdiction from replies the v1.1 judge had passed. Each row was labelled by two independent blind passes against the rule text; the passes agreed on 271 of 274 and 142 of 150, and the disagreements were adjudicated and recorded. The result is 258 pass and 166 fail. The 8-versus-92 skew of v1.1 did not survive relabelling: the same hand-written rows come out near even.
+
+**The candidates.** 28 judges: 14 through Bedrock, 9 through Ollama Cloud, 3 through the Anthropic API, 2 through the OpenAI API. A judge is not scored on rows its own model family wrote.
+
+**The result.** `ollama:deepseek-v4-pro` leads on macro-F1 at 0.958 (0.94 to 0.98) with every row answered. `claude-opus-5` (0.947), `gpt-5.6-terra` (0.945), `claude-sonnet-5` (0.942) and `glm-5.3-flash` (0.941) sit inside that interval, so the table does not name a winner. Everything from rank 8 down is outside it, including `mistral-large-3-675b`, the v1.1 judge, at rank 17 with 0.924. Both baselines score under 0.38.
+
+**What the run taught about the harness.** Ten candidate lanes lost verdicts to faults that were not the judge's: a greedy JSON extractor, output caps too small for models that think before answering, a throttled Ollama Cloud subscription, and a Bedrock account that had not submitted the Anthropic use-case form. Every affected row was re-run before scoring. Two judges that had been silent on the hardest rows lost ground once made to answer them, `claude-opus-5` from 0.954 to 0.947 and `glm-5.3-flash` from 0.952 to 0.941, which is the argument for never dropping a judge's failed rows from its score. The faults, their fixes and the cost of the run are in `docs/judge-selection-2026-09-07.md`.
+
+**What it does not settle.** The labels are model-assisted, with two blind passes and a recorded adjudication, and have not had a human second pass. The judge for the next leaderboard run is chosen on reliability and running cost among the overlapping five, and that choice will be recorded before the run.
 
 ## 9 Limitations
 
@@ -585,7 +599,7 @@ A second, structural caveat: PRIN 2A binds Financial Conduct Authority-authorise
 ### 9.5 The judge
 
 - **Self-preference is not measured.** Every reply in the meta-eval set is human-written, so no candidate judge can recognise its own output. A judge can win pass 1 and still be soft on its own replies in pass 2. The mitigation is procedural — no assistant grades its own row — and it is not a measurement.
-- **The agreement sample is small.** Section 7.5 gives the numbers. In v1.1 it is 100 rows, 8 of them pass, so every pass-side statistic rests on those 8.
+- **The agreement sample is small.** Section 7.5 gives the numbers. In v1.1 it was 100 rows, 8 of them pass; in v1.2 it is 424 rows, 258 of them pass, and the intervals are about plus or minus 0.02 on macro-F1.
 - **One judge, one run.** Version v1.1 does not report variance across repeated judge runs at the same temperature, which HealthBench does report. Section 8.4 carries this as the first thing the numbers cannot do.
 - **The judge is also a contestant.** The phase 1 winner is a model that also holds a leaderboard row. That row is marked `self_graded` and is self-reported, the same treatment the authors' own assistant gets under 9.1. It landed mid-table, which is not the shape self-preference would take, but that is an observation and not a control.
 - **The selection metric and the safety metric disagree.** Macro-F1 chose `mistral-large-3-675b`; the runner-up had the better balanced accuracy and full coverage, meaning it was better on the 8-row pass class. Section 7 selects on macro-F1 because that is what the method fixed in advance, and a reader who cares more about false findings than about macro-F1 would have chosen the runner-up on the same table.
@@ -696,11 +710,11 @@ Collected in one place so a reader does not have to assemble it from nine sectio
 
 | Quantity | Status in v1.1 | Blocked on |
 |---|---|---|
-| Human labels | 100 of 394 rows, one labeller (92 fail / 8 pass) | A second labeller, and more pass-class rows |
+| Labels | 424 of 544 rows, two blind passes with adjudication (258 pass / 166 fail); v1.1 had 100 rows, one labeller (92 fail / 8 pass) | A human second pass on the model-assisted labels |
 | Inter-labeller agreement | Not measured | A second labeller marking the same rows |
-| Judge macro F1 overall | 0.8194 for the selected judge, over 100 rows | — |
+| Judge macro F1 overall | v1.1: 0.8194 for `mistral-large-3-675b` over 100 rows. v1.2: 0.958 (0.94 to 0.98) for the leader over 424 rows | — |
 | Judge macro F1 per category | Not measured | Too few rows per category to support it |
-| Judge selected | `mistral-large-3-675b` | — |
+| Judge selected | v1.1: `mistral-large-3-675b`. v1.2: not yet declared; five candidates overlap at the top, and `mistral-large-3-675b` is at rank 17 | The choice, with its secondary criteria, recorded before the next leaderboard run |
 | Judge run-to-run variance | Not measured | Repeated judge runs at the same temperature |
 | Assistant scores | 51 models, single run, published as 48 rows after 3 same-model inference-provider pairs are merged | Repeats, for an error bar |
 | Frontier closed models | Absent | Account entitlement and billing, see 9.6 |
