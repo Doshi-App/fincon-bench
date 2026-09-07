@@ -53,6 +53,17 @@ Judge cost at 33,300 calls, using this run's per-call rates: DeepSeek V4 Pro on 
 10. **The 1Password session lapsed mid-run.** `op run` injects keys at launch, so live runs were unaffected, but later re-judge passes failed until the app was unlocked. Rule: unlock 1Password before starting a batch and keep the app open.
 11. **The repeat default was documented but never run.** The README said 10 passes; the published rows were 1. Fix: the README carries a history note, and `run.json` records the count per run.
 
+## Decision (2026-09-07): two judges, one tiebreak
+
+Ven chose, on reliability first and running cost second:
+
+- **Judge A:** `ollama:deepseek-v4-pro`, macro-F1 0.958, every row answered, subscription-priced.
+- **Judge B:** `ollama:glm-5.3-flash`, macro-F1 0.941, subscription-priced. On the 424 rows A and B agree on 95 percent, and are right 98 percent of the time when they agree; alone each is right 95 to 96 percent.
+- **Tiebreak:** `anthropic:claude-opus-5` marks only the rows A and B disagree on, about 5 percent, so about 1,700 calls and about $30 for the full leaderboard.
+- Each row publishes one verdict plus a flag saying whether it needed the tiebreak. Every pass of every reply is judged by both A and B, so judge calls are twice the reply count plus the tiebreaks: about 68,300 for the run below.
+- Throughput is accepted as the cost: the two main judges share the Ollama Cloud subscription with 17 contestants, so judging runs spaced out on an always-on machine rather than in parallel.
+- The harness has one judge today. A two-judge mode with the tiebreak rule is the first item in the leaderboard handoff.
+
 ## Before the leaderboard run
 
 1. Pick the judge (separate conversation; criteria in memory: reliability, then running cost, possibly two judges with one from a cheap lane).
