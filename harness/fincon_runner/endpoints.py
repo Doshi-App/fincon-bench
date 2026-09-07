@@ -32,6 +32,15 @@ OLLAMA_URL = "https://ollama.com/api/chat"
 # A fan-out across 20 models throttles. Retry the codes that clear on their own.
 RETRYABLE = (408, 429, 500, 502, 503, 504)
 
+# Ollama Cloud answers 429 with "usage limit" when the subscription's window is
+# spent, not when a call is too fast. That clears in minutes to hours, not
+# seconds, so such a call waits `USAGE_LIMIT_WAIT` seconds between tries, up to
+# `USAGE_LIMIT_ATTEMPTS` times, before it is recorded as an error. Set
+# FINCON_USAGE_LIMIT_WAIT=0 to disable the long wait.
+USAGE_LIMIT_MARK = "usage limit"
+USAGE_LIMIT_WAIT = int(os.environ.get("FINCON_USAGE_LIMIT_WAIT", "300"))
+USAGE_LIMIT_ATTEMPTS = 24
+
 
 class EndpointError(RuntimeError):
     """A call that failed after its retry budget was spent."""
@@ -48,18 +57,28 @@ def _post(url: str, payload: dict, headers: dict, timeout: int) -> dict:
 def _with_retries(call, attempts: int = 5, base: float = 2.0) -> dict:
     """Back off on throttling. Fail fast on anything a retry cannot fix."""
     last = ""
-    for attempt in range(attempts):
+    limit_waits = 0
+    attempt = 0
+    while attempt < attempts:
         try:
             return call()
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", "replace")[:300]
             last = f"HTTP {exc.code}: {detail}"
+            if exc.code == 429 and USAGE_LIMIT_MARK in detail and USAGE_LIMIT_WAIT > 0:
+                # The window is spent. Wait it out; do not burn the retry budget.
+                limit_waits += 1
+                if limit_waits > USAGE_LIMIT_ATTEMPTS:
+                    raise EndpointError(last) from None
+                time.sleep(USAGE_LIMIT_WAIT + random.uniform(0, 15))
+                continue
             if exc.code not in RETRYABLE and "hrottl" not in detail:
                 raise EndpointError(last) from None
         except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
             last = f"{type(exc).__name__}: {exc}"
-        if attempt < attempts - 1:
-            time.sleep(base * (2**attempt) + random.uniform(0, 1.5))
+        attempt += 1
+        if attempt < attempts:
+            time.sleep(base * (2 ** (attempt - 1)) + random.uniform(0, 1.5))
     raise EndpointError(last or "the call failed for an unknown reason")
 
 
