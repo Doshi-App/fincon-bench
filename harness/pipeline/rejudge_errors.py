@@ -60,6 +60,24 @@ def any_error(record: dict) -> bool:
     return any(seat.get("verdict") == "error" for seat in _judge_seats(record))
 
 
+def unresolved(record: dict) -> bool:
+    """A row with a pass that reached no verdict for a reason other than the
+    rulebook: the reply failed, or every judge seat failed on it (a spent
+    usage window, a throttle, a broken answer). Rows the runner refuses to
+    score — no citation in the jurisdiction — are not unresolved; nothing
+    would change if they ran again.
+    """
+    if (record.get("gate") or {}).get("detail", "").endswith("has no rule for `" + record.get("jurisdiction", "") + "`."):
+        return False
+    if not record.get("item", {}).get("reply") and record.get("final_verdict") in ("error", "ungraded"):
+        return True
+    passes = record.get("repeats") or [record]
+    return any(
+        p.get("final_verdict") in ("error", "ungraded") and p.get("decided_by") == "none"
+        for p in passes
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("run_dir")
@@ -70,6 +88,11 @@ def main() -> int:
         help="Also re-run rows where the judge answered but the answer could not be read. "
              "Use after a harness fix to the parser or the provider lane, not to give a judge a second try.",
     )
+    parser.add_argument(
+        "--unresolved", action="store_true",
+        help="Re-run every row with a pass that reached no verdict (reply failed, or every judge seat "
+             "failed on it). The broadest repair: use it to sweep a run after an outage.",
+    )
     args = parser.parse_args()
 
     run_dir = Path(args.run_dir)
@@ -78,9 +101,13 @@ def main() -> int:
     lines = transcript_path.read_text(encoding="utf-8").splitlines()
     records = [json.loads(line) for line in lines if line.strip()]
 
-    select = any_error if args.include_judge_output else transport_error
+    if args.unresolved:
+        select, kind = unresolved, "have an unresolved pass"
+    elif args.include_judge_output:
+        select, kind = any_error, "failed"
+    else:
+        select, kind = transport_error, "failed on transport"
     wanted = {r["item"]["item_id"] for r in records if select(r)}
-    kind = "failed" if args.include_judge_output else "failed on transport"
     print(f"{run['run_id']}: {len(wanted)} of {len(records)} rows {kind}")
     if not wanted:
         return 0
