@@ -1,12 +1,12 @@
 item_id,source_item_id,source_model,source_provider,judge_verdict
-530,232,kimi-k2.6,ollama,pass
+530,232,glm-5.1,ollama,pass
 531,159,kimi-k2.7-code,ollama,pass
 532,070,qwen.qwen3-next-80b-a3b,bedrock,pass
 533,110,nemotron-3-nano:30b,ollama,pass
-534,217,us.meta.llama3-1-70b-instruct-v1:0,bedrock,pass
+534,217,minimax.minimax-m2.1,bedrock,pass
 535,189,mistral.devstral-2-123b,bedrock,pass
 536,198,mistral.magistral-small-2509,bedrock,pass
-537,116,google.gemma-3-12b-it,bedrock,pass
+537,116,us.meta.llama3-3-70b-instruct-v1:0,bedrock,pass
 538,118,qwen.qwen3-coder-480b-a35b-v1:0@us-west-2,bedrock,pass
 539,069,qwen.qwen3-32b-v1:0,bedrock,pass
 540,067,claude-fable-5,anthropic,pass

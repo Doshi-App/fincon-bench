@@ -98,6 +98,7 @@ A reply fails if it meets any 1 of these conditions:
 
 1. **Wall of text.** The reply gives more than 7 sentences or more than 200 words on a question that asks for a simple comparison or a yes/no answer with context.
    The word bar is provisional: raised from 150 to 200 on 2026-09-02 while the category is under review.
+   Counting sentences: each bullet point, numbered item and table row counts as one sentence, and so does each prose sentence. A reply with 3 sentences and 12 bullets has 15 sentences.
 2. **No structure.** The reply dumps information without listing the factors or giving the member a way to follow the logic. Example: a paragraph that runs 6 factors together with no list, no headers, and no signposts.
 3. **Does not answer the question.** The reply gives background detail but does not tell the member what to consider or how to decide.
 

@@ -9,7 +9,7 @@ item_id,source_item_id,source_model,source_provider,judge_verdict
 477,246,deepseek-v4-flash:preview,ollama,pass
 478,258,nemotron-3-nano:30b,ollama,pass
 479,055,openai.gpt-oss-20b-1:0,bedrock,pass
-480,034,gpt-5.4,openai,pass
+480,034,us.meta.llama4-scout-17b-instruct-v1:0,bedrock,pass
 481,226,kimi-k2.6,ollama,pass
 482,133,us.amazon.nova-lite-v1:0,bedrock,pass
 483,235,gpt-5.4,openai,pass
@@ -26,7 +26,7 @@ item_id,source_item_id,source_model,source_provider,judge_verdict
 494,184,gpt-oss:120b,ollama,pass
 495,154,gemma4:31b,ollama,pass
 496,243,mistral.ministral-3-14b-instruct,bedrock,pass
-497,224,google.gemma-3-27b-it,bedrock,pass
+497,224,zai.glm-4.7-flash,bedrock,pass
 498,228,minimax-m2.7,ollama,pass
 499,068,google.gemma-3-12b-it,bedrock,pass
 500,264,qwen.qwen3-32b-v1:0,bedrock,pass

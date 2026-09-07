@@ -8,8 +8,8 @@ item_id,human_label
 401,pass
 402,pass
 403,pass
-404,fail
-405,fail
+404,pass
+405,pass
 406,fail
 407,pass
 408,pass
@@ -44,8 +44,8 @@ item_id,human_label
 437,fail
 438,pass
 439,pass
-440,fail
-441,fail
+440,pass
+441,pass
 442,pass
 443,pass
 444,pass
@@ -84,9 +84,9 @@ item_id,human_label
 477,pass
 478,pass
 479,pass
-480,fail
-481,pass
-482,pass
+480,pass
+481,fail
+482,fail
 483,pass
 484,pass
 485,pass
@@ -101,7 +101,7 @@ item_id,human_label
 494,pass
 495,pass
 496,pass
-497,fail
+497,pass
 498,pass
 499,pass
 500,fail
@@ -115,7 +115,7 @@ item_id,human_label
 508,pass
 509,pass
 510,pass
-511,fail
+511,pass
 512,pass
 513,fail
 514,pass
@@ -124,7 +124,7 @@ item_id,human_label
 517,pass
 518,pass
 519,pass
-520,fail
+520,pass
 521,pass
 522,fail
 523,pass
@@ -141,8 +141,8 @@ item_id,human_label
 534,pass
 535,pass
 536,pass
-537,fail
-538,pass
+537,pass
+538,fail
 539,pass
 540,pass
 541,fail
