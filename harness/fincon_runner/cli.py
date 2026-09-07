@@ -27,8 +27,7 @@ from .leaderboard import leaderboard, load_corrections, miss_rate
 from .models import GateResult, GradedItem, Item, JudgeResult, RepeatRun
 from .prompts import PromptError, rebuild_dataset_prompts
 from .providers import (
-    DEFAULT_REPEATS,
-    REPEATED_PROVIDER_KINDS,
+    default_repeats_for,
     ProviderError,
     build_provider,
     provider_kind,
@@ -149,16 +148,13 @@ def cmd_run(args) -> int:
     )
     judge = build_judge(args.judge)
 
-    # A cheap or self-hosted provider (ollama, bedrock) runs each item 10
-    # times and takes the majority verdict, because one flaky reply should
-    # not decide a finding. A paid frontier key (anthropic, openai) runs
-    # once, because each call costs real money. --repeats overrides either.
+    # Passes per item come from the provider kind (see
+    # `providers.DEFAULT_REPEATS_BY_KIND`): 5 on the cheap lanes, 2 on
+    # anthropic, 1 on openai. --repeats overrides any of them.
     if args.repeats is not None:
         repeats = args.repeats
-    elif provider_kind(args.provider) in REPEATED_PROVIDER_KINDS:
-        repeats = DEFAULT_REPEATS
     else:
-        repeats = 1
+        repeats = default_repeats_for(provider_kind(args.provider))
 
     run_id = args.run_id or run_id_for(args.assistant)
     config = RunConfig(

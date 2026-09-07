@@ -11,7 +11,7 @@
 #
 # Each of these providers runs 1 pass per item by default (see
 # harness/fincon_runner/providers.py, REPEATED_PROVIDER_KINDS) — a paid
-# frontier call, unlike the 10 passes bedrock/ollama get, so this list should
+# frontier call, unlike the 5 passes bedrock/ollama get, so this list should
 # stay short.
 #
 # Usage:

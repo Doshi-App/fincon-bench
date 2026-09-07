@@ -79,13 +79,22 @@ CANDIDATES=(
 )
 
 MAX_PARALLEL=5
+# Ollama Cloud throttles a subscription across all of its requests, not per
+# model. Five judges at six requests each lost 159 rows to 429s in the first
+# 424-row run; one judge at a time at two requests lost none. Ollama
+# candidates therefore run after the others, one at a time, at low
+# concurrency. Set OLLAMA_CONCURRENCY to change the per-judge fan-out.
+OLLAMA_CONCURRENCY="${OLLAMA_CONCURRENCY:-2}"
+OLLAMA_QUEUE=()
 
 slug() { echo "$1" | tr ':/@.' '----' | tr -cd 'A-Za-z0-9-'; }
 
 # SKIP_JUDGES is an optional regex; matching candidates are left out of this run.
 for candidate in "${CANDIDATES[@]}"; do
   if [ -n "${SKIP_JUDGES:-}" ] && [[ "$candidate" =~ $SKIP_JUDGES ]]; then echo "skip $candidate" >>logs/select-judge.log; continue; fi
-  while [ "$(jobs -rp | wc -l)" -ge "$MAX_PARALLEL" ]; do wait -n; done
+  case "$candidate" in ollama:*) OLLAMA_QUEUE+=("$candidate"); continue;; esac
+  # macOS ships bash 3.2, which has no `wait -n`; poll instead of spinning.
+  while [ "$(jobs -rp | wc -l)" -ge "$MAX_PARALLEL" ]; do sleep 5; done
   name="judge-$(slug "$candidate")"
   (
     cd harness || exit 1
@@ -102,4 +111,22 @@ for candidate in "${CANDIDATES[@]}"; do
   ) &
 done
 wait
+
+# Ollama Cloud judges: back to back, low concurrency (see OLLAMA_CONCURRENCY above).
+for candidate in "${OLLAMA_QUEUE[@]}"; do
+  name="judge-$(slug "$candidate")"
+  (
+    cd harness || exit 1
+    python3 -m fincon_runner run \
+      --dataset "../$LABELLED_SET" \
+      --assistant "hand-written-replies" \
+      --provider dataset \
+      --judge "$candidate" \
+      --concurrency "$OLLAMA_CONCURRENCY" \
+      --run-id "$name" \
+      --out ../submissions/judges \
+      --quiet >"../logs/${name}.log" 2>&1
+    echo "done $candidate rc=$?" >>../logs/select-judge.log
+  )
+done
 echo "select-judge complete" >>logs/select-judge.log

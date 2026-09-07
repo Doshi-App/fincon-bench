@@ -261,7 +261,7 @@ class GradedItem:
     finding_id: str = ""
     error: str = ""
     # Empty unless the run repeated this item. `docs` calls this out: a
-    # provider named in `providers.REPEATED_PROVIDER_KINDS` runs 10 passes and
+    # provider named in `providers.REPEATED_PROVIDER_KINDS` runs 5 passes and
     # `final_verdict` above is already the majority across them.
     repeats: tuple[RepeatRun, ...] = ()
     repeat_tally: dict = field(default_factory=dict)

@@ -280,7 +280,9 @@ class NoJudge(Judge):
 class AnthropicJudge(Judge):
     """Mark with a model on the Anthropic API."""
 
-    def __init__(self, model: str, max_tokens: int = 1024):
+    # Current Claude models think before answering and the thinking counts
+    # against max_tokens; 1024 left the visible JSON empty or cut short.
+    def __init__(self, model: str, max_tokens: int = 8192):
         try:
             import anthropic  # noqa: PLC0415
         except ImportError as exc:  # pragma: no cover - depends on the environment
@@ -408,7 +410,9 @@ class EndpointJudge(Judge):
     pass, so an unreachable judge never turns into a clean leaderboard.
     """
 
-    def __init__(self, kind: str, model: str, max_tokens: int = 4096):
+    # Thinking models on Ollama Cloud write their analysis into the reply
+    # before the JSON; 4096 cut some of them off before the verdict.
+    def __init__(self, kind: str, model: str, max_tokens: int = 8192):
         if not model:
             raise RuntimeError(f"the `{kind}` judge needs a model ID")
         self.kind = kind
