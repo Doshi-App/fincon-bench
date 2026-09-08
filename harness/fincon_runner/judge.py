@@ -13,6 +13,13 @@ The runner builds the prompt from 4 parts.
 
 The judge answers in JSON. A judge that answers anything else is recorded as an
 error, not as a pass, so a broken judge never turns into a clean leaderboard.
+
+Two-judge mode. `JudgePanel` holds judge A, judge B and a tiebreak judge. Every
+reply goes to A and B. When they give the same verdict, that is the verdict.
+When they differ, the tiebreak judge marks the reply and its verdict stands.
+All three answers are kept, plus a flag saying the tiebreak ran, so a reader
+can see which rows were contested. A and B are called one after the other,
+never at the same time, because they share one Ollama Cloud subscription.
 """
 
 from __future__ import annotations
@@ -20,6 +27,7 @@ from __future__ import annotations
 import json
 import os
 import re
+from dataclasses import dataclass
 
 from .endpoints import EndpointError, bedrock_chat, ollama_chat
 from .models import (
@@ -34,7 +42,32 @@ from .models import (
 )
 
 VALID_VERDICTS = ("fail", "pass", "arguable")
-JSON_BLOCK = re.compile(r"\{.*\}", re.S)
+JSON_BLOCK = re.compile(r"\{.*\}", re.S)  # kept for callers; parse_verdict uses _json_candidates
+
+
+def _json_candidates(raw: str) -> list[str]:
+    """Every balanced {...} span in the text, outermost first, left to right.
+
+    Judges wrap the answer in ```json fences, add a sentence after it, or
+    mention braces in prose. A greedy first-to-last-brace match swallowed all
+    of that and failed to parse. Balanced spans let the first well-formed
+    object win, whatever surrounds it.
+    """
+    spans, depth, start, in_str, esc = [], 0, -1, False, False
+    for i, ch in enumerate(raw):
+        if in_str:
+            if esc: esc = False
+            elif ch == "\\": esc = True
+            elif ch == '"': in_str = False
+            continue
+        if ch == '"' and depth > 0: in_str = True
+        elif ch == "{":
+            if depth == 0: start = i
+            depth += 1
+        elif ch == "}" and depth > 0:
+            depth -= 1
+            if depth == 0: spans.append(raw[start:i + 1])
+    return spans
 
 # The rubric section that names dataset rows and their answers. It is dropped
 # from the prompt by default, so a judge cannot read the answer to a row it is
@@ -178,21 +211,31 @@ def build_prompt(
 
 def parse_verdict(raw: str, model: str) -> JudgeResult:
     """Read the judge's JSON answer. Anything else is an error."""
-    match = JSON_BLOCK.search(raw or "")
-    if not match:
+    candidates = _json_candidates(raw or "")
+    if not candidates:
         return JudgeResult(
             verdict="error",
             model=model,
             reasoning="The judge did not answer with JSON.",
             raw=raw,
         )
-    try:
-        payload = json.loads(match.group(0))
-    except json.JSONDecodeError as exc:
+    payload, last_error = None, None
+    for candidate in candidates:
+        try:
+            parsed = json.loads(candidate)
+        except json.JSONDecodeError as exc:
+            last_error = exc
+            continue
+        if isinstance(parsed, dict) and "verdict" in parsed:
+            payload = parsed
+            break
+        if payload is None and isinstance(parsed, dict):
+            payload = parsed
+    if payload is None:
         return JudgeResult(
             verdict="error",
             model=model,
-            reasoning=f"The judge's JSON did not parse: {exc}",
+            reasoning=f"The judge's JSON did not parse: {last_error}",
             raw=raw,
         )
 
@@ -216,6 +259,32 @@ def parse_verdict(raw: str, model: str) -> JudgeResult:
     )
 
 
+@dataclass(frozen=True)
+class PanelVerdict:
+    """What the judging stage returned for one reply.
+
+    `judge` is judge A's answer (or the only judge's). `judge2` and `tiebreak`
+    are `None` under a single judge. `verdict` is the answer the pass uses and
+    `decider` is the result whose reasoning explains it.
+    """
+
+    verdict: str
+    judge: JudgeResult
+    judge2: JudgeResult | None = None
+    tiebreak: JudgeResult | None = None
+    tiebreak_used: bool = False
+
+    @property
+    def decider(self) -> JudgeResult:
+        if self.tiebreak_used and self.tiebreak is not None:
+            return self.tiebreak
+        return self.judge
+
+    @property
+    def is_panel(self) -> bool:
+        return self.judge2 is not None
+
+
 class Judge:
     """The interface every judge implements."""
 
@@ -223,6 +292,43 @@ class Judge:
 
     def mark(self, prompt: str) -> JudgeResult:
         raise NotImplementedError
+
+    def mark_panel(self, prompt: str) -> PanelVerdict:
+        """Mark once and wrap the answer. `JudgePanel` overrides this."""
+        result = self.mark(prompt)
+        return PanelVerdict(verdict=result.verdict, judge=result)
+
+
+class JudgePanel(Judge):
+    """Two judges and a tiebreak. See the module docstring for the rule.
+
+    A pass where A and B both fail to answer is an `error`: there is nothing to
+    break, and the tiebreak is not spent on it. `rejudge_errors.py` re-runs such
+    rows. A pass where one of them answers and the other does not is a
+    disagreement, and goes to the tiebreak.
+    """
+
+    def __init__(self, judge_a: Judge, judge_b: Judge, tiebreak: Judge):
+        self.judge_a = judge_a
+        self.judge_b = judge_b
+        self.tiebreak = tiebreak
+        self.name = f"{judge_a.name} + {judge_b.name}, tiebreak {tiebreak.name}"
+
+    def mark(self, prompt: str) -> JudgeResult:
+        return self.mark_panel(prompt).decider
+
+    def mark_panel(self, prompt: str) -> PanelVerdict:
+        a = self.judge_a.mark(prompt)
+        b = self.judge_b.mark(prompt)
+        a_ok = a.verdict in VALID_VERDICTS
+        b_ok = b.verdict in VALID_VERDICTS
+        if a_ok and b_ok and a.verdict == b.verdict:
+            return PanelVerdict(verdict=a.verdict, judge=a, judge2=b)
+        if not a_ok and not b_ok:
+            return PanelVerdict(verdict="error", judge=a, judge2=b)
+        c = self.tiebreak.mark(prompt)
+        verdict = c.verdict if c.verdict in VALID_VERDICTS else "error"
+        return PanelVerdict(verdict=verdict, judge=a, judge2=b, tiebreak=c, tiebreak_used=True)
 
 
 class NoJudge(Judge):
@@ -245,7 +351,9 @@ class NoJudge(Judge):
 class AnthropicJudge(Judge):
     """Mark with a model on the Anthropic API."""
 
-    def __init__(self, model: str, max_tokens: int = 1024):
+    # Current Claude models think before answering and the thinking counts
+    # against max_tokens; 1024 left the visible JSON empty or cut short.
+    def __init__(self, model: str, max_tokens: int = 8192):
         try:
             import anthropic  # noqa: PLC0415
         except ImportError as exc:  # pragma: no cover - depends on the environment
@@ -306,28 +414,44 @@ class OpenAiJudge(Judge):
         self.name = f"openai:{model}"
         self.max_tokens = max_tokens
 
+    def _create(self, prompt: str):
+        """One chat call. Newer OpenAI models reject `max_tokens` (they want
+        `max_completion_tokens`) and reject any `temperature` but the default,
+        while OpenAI-compatible hosts reached through OPENAI_BASE_URL may only
+        know the older names. Start with the modern shape and fall back on the
+        specific 400 each host returns, so one code path serves both."""
+        kwargs: dict = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": prompt}],
+            "max_completion_tokens": self.max_tokens,
+            "temperature": 0.0,
+        }
+        for _ in range(3):
+            try:
+                return self.client.chat.completions.create(**kwargs)
+            except Exception as exc:  # noqa: BLE001 - inspect, then re-raise if not a parameter complaint
+                text = str(exc)
+                if "max_completion_tokens" in text and "max_completion_tokens" in kwargs:
+                    kwargs["max_tokens"] = kwargs.pop("max_completion_tokens")
+                    continue
+                if "temperature" in text and "temperature" in kwargs:
+                    kwargs.pop("temperature")
+                    continue
+                raise
+        return self.client.chat.completions.create(**kwargs)
+
     def mark(self, prompt: str) -> JudgeResult:  # pragma: no cover - needs the network
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                max_tokens=self.max_tokens,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.0,
-            )
+            response = self._create(prompt)
         except Exception as exc:  # noqa: BLE001 - the judge must not crash the run
             return JudgeResult(verdict="error", model=self.model, reasoning=str(exc))
         text = response.choices[0].message.content or ""
         result = parse_verdict(text, self.model)
-        # Kimi sometimes returns an empty first chunk; retry once if the verdict is an
-        # error because the response was blank.
-        if result.verdict == "error" and not text.strip():
+        # Kimi sometimes returns an empty first chunk, and GPT-5.6 occasionally
+        # emits JSON that does not parse. One retry covers both.
+        if result.verdict == "error":
             try:
-                response = self.client.chat.completions.create(
-                    model=self.model,
-                    max_tokens=self.max_tokens,
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.0,
-                )
+                response = self._create(prompt)
                 text = response.choices[0].message.content or ""
                 result = parse_verdict(text, self.model)
             except Exception as exc:  # noqa: BLE001
@@ -357,7 +481,9 @@ class EndpointJudge(Judge):
     pass, so an unreachable judge never turns into a clean leaderboard.
     """
 
-    def __init__(self, kind: str, model: str, max_tokens: int = 4096):
+    # Thinking models on Ollama Cloud write their analysis into the reply
+    # before the JSON; 4096 cut some of them off before the verdict.
+    def __init__(self, kind: str, model: str, max_tokens: int = 8192):
         if not model:
             raise RuntimeError(f"the `{kind}` judge needs a model ID")
         self.kind = kind
@@ -399,3 +525,19 @@ def build_judge(spec: str) -> Judge:
     if kind in ("bedrock", "ollama"):
         return EndpointJudge(kind, model)
     raise RuntimeError(f"unknown judge `{spec}`")
+
+
+def build_panel(judge: str, judge2: str = "", tiebreak: str = "") -> Judge:
+    """Build a single judge, or a `JudgePanel` when `judge2` is given.
+
+    A second judge without a tiebreak is refused: the rule needs a third voice
+    for the rows the first two disagree on, and a coin flip is not a judge.
+    """
+    first = build_judge(judge)
+    if not judge2:
+        if tiebreak:
+            raise RuntimeError("--tiebreak needs --judge2: a tiebreak breaks a disagreement between two judges")
+        return first
+    if not tiebreak:
+        raise RuntimeError("--judge2 needs --tiebreak: the rows the two judges disagree on need a third judge")
+    return JudgePanel(first, build_judge(judge2), build_judge(tiebreak))

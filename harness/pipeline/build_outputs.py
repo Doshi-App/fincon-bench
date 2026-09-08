@@ -18,7 +18,17 @@ Two honesty rules are enforced here rather than left to the reader.
   of its probes were decided — a low coverage makes the rate less trustworthy,
   and the column is there to say so.
 - **A model that is also the judge is flagged.** The README says no assistant
-  grades its own leaderboard row. Its row carries `self_graded=yes`.
+  grades its own leaderboard row. Its row carries `self_graded=yes`. Under a
+  two-judge run any of the three seats counts.
+
+Under a two-judge run each output row also carries `judge_verdict` (judge A),
+`judge2_verdict` (judge B), `tiebreak_verdict` (the third judge's answer on
+the row's representative pass, or on its first contested pass; empty when no
+pass was contested) and `tiebreak` (`yes` when any pass of the row needed the
+third judge). `decided_by` is `tiebreak` when the representative pass itself
+was contested; `judge_reasoning` and `quoted_text` are then the third judge's
+words. `repeats` is the pass count behind the row and `tiebreak_passes` how
+many of those passes were contested.
 - **The same weights on 2 inference stacks are 1 leaderboard row, not 2.**
   `merge_cross_provider` folds each pair in `MERGE_GROUPS` — currently Mistral
   Large 3 675B and both GPT-OSS sizes — into 1 row, averaging every rate
@@ -38,8 +48,10 @@ from pathlib import Path
 OUTPUT_FIELDS = [
     "model", "provider", "item_id", "jurisdiction", "category", "axis",
     "rule_id", "permissions", "threshold", "prompt_variant", "probe", "reply",
-    "judge_verdict", "final_verdict", "decided_by", "product_risk",
+    "judge_verdict", "judge2_verdict", "tiebreak_verdict", "tiebreak",
+    "final_verdict", "decided_by", "product_risk",
     "judge_reasoning", "quoted_text", "gate_verdict", "reply_tokens",
+    "repeats", "tiebreak_passes",
 ]
 
 LEADERBOARD_FIELDS = [
@@ -184,6 +196,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("transcript", nargs="+")
     parser.add_argument("--judge", default="", help="The judge spec, to flag self-grading.")
+    parser.add_argument("--judge2", default="", help="The second judge spec, if any. Also flags self-grading.")
+    parser.add_argument("--tiebreak", default="", help="The tiebreak judge spec, if any. Also flags self-grading.")
     parser.add_argument("--outputs", default="results/model_outputs.csv")
     parser.add_argument("--leaderboard", default="results/leaderboard.csv")
     parser.add_argument("--categories", default="results/category_breakdown.csv")
@@ -192,6 +206,11 @@ def main() -> int:
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
     from fincon_runner.models import ALL_CATEGORIES, axis_of  # noqa: PLC0415
+
+    judges = {spec for spec in (args.judge, args.judge2, args.tiebreak) if spec}
+    judge_label = " + ".join(spec for spec in (args.judge, args.judge2) if spec)
+    if args.tiebreak:
+        judge_label += f", tiebreak {args.tiebreak}"
 
     rows: list[dict] = []
     per_model: dict[str, list[dict]] = defaultdict(list)
@@ -203,6 +222,10 @@ def main() -> int:
             provider, model = split_spec(assistant)
             item = record.get("item", {})
             judge = record.get("judge", {})
+            judge2 = record.get("judge2") or {}
+            tiebreak = record.get("tiebreak") or {}
+            tiebreak_used = bool(record.get("tiebreak_used", False))
+            decider = tiebreak if record.get("decided_by") == "tiebreak" and tiebreak else judge
             gate = record.get("gate", {})
             category = record.get("category", "")
             row = {
@@ -219,13 +242,18 @@ def main() -> int:
                 "probe": item.get("probe", ""),
                 "reply": item.get("reply", ""),
                 "judge_verdict": judge.get("verdict", ""),
+                "judge2_verdict": judge2.get("verdict", ""),
+                "tiebreak_verdict": tiebreak.get("verdict", "") if tiebreak else "",
+                "tiebreak": ("yes" if tiebreak_used else "no") if judge2 else "",
                 "final_verdict": record.get("final_verdict", ""),
                 "decided_by": record.get("decided_by", ""),
                 "product_risk": record.get("product_risk", ""),
-                "judge_reasoning": judge.get("reasoning", ""),
-                "quoted_text": judge.get("quoted_text", ""),
+                "judge_reasoning": decider.get("reasoning", ""),
+                "quoted_text": decider.get("quoted_text", ""),
                 "gate_verdict": gate.get("verdict", ""),
                 "reply_tokens": item.get("output_tokens") or "",
+                "repeats": len(record.get("repeats") or []) or 1,
+                "tiebreak_passes": record.get("tiebreak_passes", "") if judge2 else "",
             }
             rows.append(row)
             per_model[assistant].append(row)
@@ -256,7 +284,7 @@ def main() -> int:
         board.append({
             "model": model,
             "provider": provider,
-            "self_graded": "yes" if assistant == args.judge else "no",
+            "self_graded": "yes" if assistant in judges else "no",
             "items": len(items),
             "decided": len(decided),
             "passes": passes,
@@ -270,7 +298,7 @@ def main() -> int:
             "behaviour_pass_rate": axis_rate("behaviour"),
             "compliance_pass_rate": axis_rate("compliance"),
             "avg_reply_tokens": round(sum(tokens) / len(tokens)) if tokens else "",
-            "judge": args.judge,
+            "judge": judge_label,
         })
 
     board = merge_cross_provider(board)

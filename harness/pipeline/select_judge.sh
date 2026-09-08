@@ -1,16 +1,49 @@
 #!/usr/bin/env bash
-# Phase 1: every candidate judge marks the 100 human-labelled rows.
+# Phase 1: every candidate judge marks the human-labelled rows.
 #
-# The provider is `dataset`, so every candidate reads the same hand-written
-# replies and the only thing that varies is the judge. Rows 001-100 are the
-# labelled ones and the file is in item_id order, so --limit 100 is exactly the
-# labelled set.
+# The provider is `dataset`, so every candidate reads the same pre-written
+# replies and the only thing that varies is the judge.
+#
+# The rows are the ones in harness/pipeline/human-labels.csv, whatever their
+# item_id. An earlier version ran `--limit 100` because the first 100 rows by
+# item_id happened to be the labelled ones. That tied selection to file order,
+# and it would have let any unlabelled row that later landed in the first 100
+# (the 120 model-written rows, for one) into the judge set without a label. The
+# labels file is now the only thing that decides which rows count.
 #
 # Run under: op run --env-file=secrets.op.env --no-masking -- harness/pipeline/select_judge.sh
 set -uo pipefail
 
 cd "$(dirname "$0")/../.." || exit 1
 mkdir -p logs submissions/judges
+
+LABELS="harness/pipeline/human-labels.csv"
+LABELLED_SET="submissions/judges/labelled-rows.csv"
+
+if [ ! -f "$LABELS" ]; then
+  echo "No $LABELS. Judge selection needs the hand labels; see results/README.md." >&2
+  exit 1
+fi
+
+# The subset of meta-eval.csv that carries a human label, in the same schema.
+python3 - "$LABELS" "$LABELLED_SET" <<'PY'
+import csv, sys
+labels_path, out_path = sys.argv[1], sys.argv[2]
+with open(labels_path, newline="", encoding="utf-8") as fh:
+    labelled = {r["item_id"].strip() for r in csv.DictReader(fh)
+                if r.get("human_label", "").strip().lower() in ("pass", "fail")}
+with open("datasets/meta-eval.csv", newline="", encoding="utf-8") as fh:
+    reader = csv.DictReader(fh)
+    rows = [r for r in reader if r["item_id"].strip() in labelled]
+    fields = reader.fieldnames
+missing = labelled - {r["item_id"].strip() for r in rows}
+if missing:
+    sys.exit(f"{len(missing)} labelled item_ids are not in datasets/meta-eval.csv: {sorted(missing)[:10]}")
+with open(out_path, "w", newline="", encoding="utf-8") as fh:
+    w = csv.DictWriter(fh, fieldnames=fields); w.writeheader(); w.writerows(rows)
+print(f"{len(rows)} labelled rows -> {out_path}")
+PY
+[ $? -eq 0 ] || exit 1
 
 CANDIDATES=(
   "bedrock:us.anthropic.claude-opus-4-5-20251101-v1:0"
@@ -31,23 +64,45 @@ CANDIDATES=(
   "ollama:qwen3.5:397b"
   "ollama:nemotron-3-ultra"
   "ollama:glm-5.2"
+  # Not on Bedrock as of 2026-09-07; Ollama Cloud is the only lane.
+  "ollama:kimi-k2.7-code"
+  "ollama:glm-5.3-flash"
+  "ollama:deepseek-v4-flash:0731"
+  "ollama:kimi-k3"
+  "ollama:glm-5.3"
+  # Direct frontier lanes. Paid per call; the scorer skips each judge's own replies.
+  "anthropic:claude-opus-5"
+  "anthropic:claude-sonnet-5"
+  "anthropic:claude-opus-4-8"
+  "openai:gpt-5.6-terra"
+  "openai:gpt-5.6-luna"
 )
 
 MAX_PARALLEL=5
+# Ollama Cloud throttles a subscription across all of its requests, not per
+# model. Five judges at six requests each lost 159 rows to 429s in the first
+# 424-row run; one judge at a time at two requests lost none. Ollama
+# candidates therefore run after the others, one at a time, at low
+# concurrency. Set OLLAMA_CONCURRENCY to change the per-judge fan-out.
+OLLAMA_CONCURRENCY="${OLLAMA_CONCURRENCY:-2}"
+OLLAMA_QUEUE=()
 
 slug() { echo "$1" | tr ':/@.' '----' | tr -cd 'A-Za-z0-9-'; }
 
+# SKIP_JUDGES is an optional regex; matching candidates are left out of this run.
 for candidate in "${CANDIDATES[@]}"; do
-  while [ "$(jobs -rp | wc -l)" -ge "$MAX_PARALLEL" ]; do wait -n; done
+  if [ -n "${SKIP_JUDGES:-}" ] && [[ "$candidate" =~ $SKIP_JUDGES ]]; then echo "skip $candidate" >>logs/select-judge.log; continue; fi
+  case "$candidate" in ollama:*) OLLAMA_QUEUE+=("$candidate"); continue;; esac
+  # macOS ships bash 3.2, which has no `wait -n`; poll instead of spinning.
+  while [ "$(jobs -rp | wc -l)" -ge "$MAX_PARALLEL" ]; do sleep 5; done
   name="judge-$(slug "$candidate")"
   (
     cd harness || exit 1
     python3 -m fincon_runner run \
-      --dataset ../datasets/meta-eval.csv \
+      --dataset "../$LABELLED_SET" \
       --assistant "hand-written-replies" \
       --provider dataset \
       --judge "$candidate" \
-      --limit 100 \
       --concurrency 6 \
       --run-id "$name" \
       --out ../submissions/judges \
@@ -56,4 +111,22 @@ for candidate in "${CANDIDATES[@]}"; do
   ) &
 done
 wait
+
+# Ollama Cloud judges: back to back, low concurrency (see OLLAMA_CONCURRENCY above).
+for candidate in "${OLLAMA_QUEUE[@]}"; do
+  name="judge-$(slug "$candidate")"
+  (
+    cd harness || exit 1
+    python3 -m fincon_runner run \
+      --dataset "../$LABELLED_SET" \
+      --assistant "hand-written-replies" \
+      --provider dataset \
+      --judge "$candidate" \
+      --concurrency "$OLLAMA_CONCURRENCY" \
+      --run-id "$name" \
+      --out ../submissions/judges \
+      --quiet >"../logs/${name}.log" 2>&1
+    echo "done $candidate rc=$?" >>../logs/select-judge.log
+  )
+done
 echo "select-judge complete" >>logs/select-judge.log

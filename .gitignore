@@ -25,3 +25,4 @@ harness/pipeline/human-labels.csv
 # Run logs from the harness driver scripts.
 logs/
 .vercel
+secrets.op.env

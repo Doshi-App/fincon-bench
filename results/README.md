@@ -1,5 +1,18 @@
 # Run of 2026-08-13 (v1.1-preliminary) — judge selection, then the leaderboard
 
+> **Judge selection was re-run on 2026-09-07.** 28 candidate judges marked 424
+> labelled rows (258 pass, 166 fail) and `judge_selection.csv` now holds that
+> run, with 95 percent bootstrap intervals. `ollama:deepseek-v4-pro` leads on
+> macro-F1 at 0.958 with full coverage; `claude-opus-5`, `gpt-5.6-terra`,
+> `claude-sonnet-5` and `glm-5.3-flash` sit inside its interval, and
+> `mistral-large-3`, the judge of the leaderboard below, is at rank 17 with
+> 0.924. The labels are published in `harness/pipeline/human-labels-claude.csv`,
+> so this selection can be re-derived. The judge for the next leaderboard run
+> is not yet chosen. Cost, failures and the run plan are in
+> `docs/judge-selection-2026-09-07.md`. Everything below this note describes
+> the 2026-08-13 run as it was.
+
+
 ## Read this before you quote a number
 
 This run is preliminary. Three limits carry through every number below.
@@ -15,8 +28,9 @@ This run is preliminary. Three limits carry through every number below.
    most neighbouring rows — see "Phase 2" below.
 
 **Judge selection in this run cannot be reproduced or checked from outside.** It
-rests on 100 hand-labelled rows that are not published and are not available.
-You can re-run the pipeline; you cannot re-derive the judge choice.
+rests on 100 hand-labelled rows that were never published and have since been
+lost. The 2026-09-07 re-selection (note above) replaces it with 424 published
+labels.
 
 **This file is one run. `README.md` at the top level is the design.** The design
 document uses illustrative figures (for example "5 candidate judges") that set
@@ -28,7 +42,7 @@ per-run audit records under `submissions/`.
 
 | File | What it holds |
 |---|---|
-| `judge_selection.csv` | 17 candidate judges scored against the 100 hand-labelled rows, plus 2 baselines. |
+| `judge_selection.csv` | Re-written 2026-09-07: 28 candidate judges scored against 424 labelled rows, plus 2 baselines, with bootstrap intervals. The 2026-08-13 table (17 judges, 100 rows) is in git history before commit `3041953`. |
 | `model_outputs.csv` | 10,887 rows — one per model per probe: the probe, the reply, and the judge's verdict with its reasoning. |
 | `leaderboard.csv` | 54 rows, ranked by failure rate over the probes the judge decided (lowest failure rate = rank 1). 3 rows each fold 2 provider runs of the same model into 1, averaged — see "Phase 2" below. 2 added columns, `est_cost_usd_1pass` and `avg_time_s_1pass`, are estimates — see "Phase 4" below before quoting either. |
 | `category_breakdown.csv` | 810 rows (54 models × 15 failure categories), long format: the failure rate 1 model earned on 1 category. Same 3-row merge as `leaderboard.csv`, same rule — averaged, not pooled. Backs the website's model-by-category matrix. |
@@ -280,10 +294,11 @@ python3 harness/pipeline/build_outputs.py submissions/runs/run-*/transcript.json
 Bedrock uses region `us-east-1` unless a model ID names its own region as
 `model@region`.
 
-**Phase 1 needs a file that is not published.** `select_judge.sh` and
-`score_judges.py` mark the 100 hand-labelled rows, and those labels are not in
-this repo and are not available. Run phases 2 and 3 with the judge named above
-and you reproduce the leaderboard; you cannot reproduce the choice of judge.
+**Phase 1 reads `harness/pipeline/human-labels.csv`**, which is gitignored; copy
+`harness/pipeline/human-labels-claude.csv` (the 424 published labels) to that
+path first. The 2026-08-13 selection used a 100-row file that was never
+published and is lost, so that choice of judge cannot be re-derived; the
+2026-09-07 selection can.
 
 ### If you use 1Password
 

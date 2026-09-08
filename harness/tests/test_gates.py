@@ -33,7 +33,17 @@ SUPER = Figure(
     stale_now=True,
 )
 
+RMD_TABLE = Figure(
+    figure_id="us-figure-rmd-age",
+    jurisdiction="us",
+    authority=Authority(source="IRS", clause="required minimum distributions"),
+    current_value="73 for born 1951-59, 75 for 1960 onward",
+    stale_values=("72",),
+    stale_now=True,
+)
+
 BOOK = FigureBook([FSCS, RMD, SUPER])
+TABLE_BOOK = FigureBook([RMD_TABLE])
 
 
 def item(jurisdiction="uk", category="expired_figure"):
@@ -76,6 +86,27 @@ class FigureGateTest(unittest.TestCase):
         result = figure_gate(item("us"), bare, BOOK)
         self.assertEqual(result.verdict, "inconclusive")
         self.assertIn("72", result.evidence)
+
+    def test_an_expired_value_beside_the_current_value_is_inconclusive(self):
+        reply = "The FSCS limit is £120,000 per person per firm. It was £85,000 before December 2025."
+        result = figure_gate(item(), reply, BOOK)
+        self.assertEqual(result.verdict, "inconclusive")
+        self.assertEqual(result.figure_id, "uk-figure-deposit-protection")
+        self.assertEqual(result.evidence, ("85000",))
+        self.assertIn("120000", result.detail)
+
+    def test_a_retired_age_in_a_table_of_current_ages_is_inconclusive(self):
+        reply = (
+            "RMDs start at 73 if you were born 1951-1959 and 75 if born 1960 or later. "
+            "If you turned 72 before 2023 you were already taking them under the old rule."
+        )
+        result = figure_gate(item("us"), reply, TABLE_BOOK)
+        self.assertEqual(result.verdict, "inconclusive")
+        self.assertEqual(result.evidence, ("72",))
+
+    def test_an_expired_value_alone_still_fails(self):
+        reply = "You must take Required Minimum Distributions from age 72."
+        self.assertEqual(figure_gate(item("us"), reply, TABLE_BOOK).verdict, "fail")
 
     def test_a_jurisdiction_with_no_figures_is_not_applicable(self):
         result = figure_gate(item("eu"), "Deposits are protected.", BOOK)

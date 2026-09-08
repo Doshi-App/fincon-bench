@@ -208,6 +208,10 @@ class JudgeResult:
             "model": self.model,
             "reasoning": self.reasoning,
             "quoted_text": self.quoted_text,
+            # The judge's own words when the verdict could not be read, so a
+            # parse failure can be inspected, and re-parsed, without paying
+            # for the call again.
+            **({"raw": self.raw[:4000]} if self.verdict == "error" and self.raw else {}),
         }
 
 
@@ -225,8 +229,16 @@ class RepeatRun:
     gate: GateResult
     judge: JudgeResult
     final_verdict: str  # fail | pass | arguable | ungraded | error
-    decided_by: str  # gate | judge | none
+    decided_by: str  # gate | judge | tiebreak | none
     output_tokens: int | None = None
+    # Two-judge mode (see `judge.JudgePanel`). `judge` above is judge A.
+    # `judge2` is judge B, `tiebreak` is the third judge's answer when A and B
+    # disagreed, and `tiebreak_used` says whether the pass needed it; such a
+    # pass has `decided_by: tiebreak`. All three stay `None`/False under a
+    # single judge, and the record shape is unchanged.
+    judge2: JudgeResult | None = None
+    tiebreak: JudgeResult | None = None
+    tiebreak_used: bool = False
 
     def as_dict(self) -> dict:
         out = {
@@ -239,6 +251,10 @@ class RepeatRun:
         }
         if self.output_tokens is not None:
             out["output_tokens"] = self.output_tokens
+        if self.judge2 is not None:
+            out["judge2"] = self.judge2.as_dict()
+            out["tiebreak"] = self.tiebreak.as_dict() if self.tiebreak else None
+            out["tiebreak_used"] = self.tiebreak_used
         return out
 
 
@@ -252,26 +268,46 @@ class GradedItem:
     judge: JudgeResult
     final_verdict: str  # fail | pass | arguable | ungraded | error
     threshold: str  # 2-condition | 3-condition | n/a
-    decided_by: str  # gate | judge | none
+    decided_by: str  # gate | judge | tiebreak | none
     assistant: str = ""
     finding_id: str = ""
     error: str = ""
     # Empty unless the run repeated this item. `docs` calls this out: a
-    # provider named in `providers.REPEATED_PROVIDER_KINDS` runs 10 passes and
+    # provider named in `providers.REPEATED_PROVIDER_KINDS` runs 5 passes and
     # `final_verdict` above is already the majority across them.
     repeats: tuple[RepeatRun, ...] = ()
     repeat_tally: dict = field(default_factory=dict)
+    # Two-judge mode. `judge` is judge A's answer on the representative pass,
+    # `judge2` judge B's, `tiebreak` the third judge's answer on the
+    # representative pass when it was contested, else on the first contested
+    # pass. `tiebreak_used` is the row's published flag: True when any pass
+    # needed the tiebreak. `tiebreak_passes` counts those passes.
+    # `decided_by` is `tiebreak` when the representative pass itself was
+    # contested, and the row's reasoning is then the third judge's.
+    judge2: JudgeResult | None = None
+    tiebreak: JudgeResult | None = None
+    tiebreak_used: bool = False
+    tiebreak_passes: int = 0
 
     @property
     def is_finding(self) -> bool:
         return self.final_verdict == "fail"
 
     @property
+    def deciding_judge(self) -> JudgeResult:
+        """The judge whose words decided the row: the tiebreak when the
+        representative pass was contested, otherwise judge A (who agreed with
+        judge B, or judged alone)."""
+        if self.decided_by == "tiebreak" and self.tiebreak is not None:
+            return self.tiebreak
+        return self.judge
+
+    @property
     def reasoning(self) -> str:
         """Why the item got its verdict, from whichever stage decided it."""
         if self.decided_by == "gate":
             return self.gate.detail
-        return self.judge.reasoning or self.gate.detail
+        return self.deciding_judge.reasoning or self.gate.detail
 
     def as_finding_record(self) -> dict:
         """The finding record shape from docs/method.md, plus the run fields."""
@@ -302,10 +338,15 @@ class GradedItem:
             record["output_tokens"] = self.item.output_tokens
         if self.judge.output_tokens is not None:
             record["judge_output_tokens"] = self.judge.output_tokens
-        if self.judge.product_risk:
-            record["product_risk"] = self.judge.product_risk
+        if self.deciding_judge.product_risk:
+            record["product_risk"] = self.deciding_judge.product_risk
         if self.error:
             record["error"] = self.error
+        if self.judge2 is not None:
+            record["judge2"] = self.judge2.as_dict()
+            record["tiebreak"] = self.tiebreak.as_dict() if self.tiebreak else None
+            record["tiebreak_used"] = self.tiebreak_used
+            record["tiebreak_passes"] = self.tiebreak_passes
         if self.repeats:
             record["repeats"] = [run.as_dict() for run in self.repeats]
             record["repeat_tally"] = self.repeat_tally

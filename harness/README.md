@@ -73,23 +73,31 @@ provider. No key is ever written to a transcript.
 
 ## Repeats — how many times an item runs
 
+**History.** The leaderboard runs of 2026-08-12 and 2026-08-13 were made before
+repeats existed: every row in `results/model_outputs.csv` is a single pass. The
+default was set to 10 on 2026-09-01 and lowered to 5 on 2026-09-07, before any
+repeated run had been published. New rows run at 5; the old rows stay at 1 until
+the leaderboard is re-run in full, and `run.json` records the count for each run.
+
 `bedrock` and `ollama` are cheap or self-hosted. `anthropic` and `openai` are
 paid frontier keys, where every call costs real money. The runner treats them
 differently.
 
 | Provider | Passes per item | Why |
 |---|---|---|
-| `ollama`, `bedrock` | 10 (default) | Cheap enough to run several times. A model on these hosts can also be flakier reply to reply, so 1 pass is not enough to trust. |
-| every other provider | 1 | A paid frontier call. 10 passes would cost 10 times as much for little gain in trust. |
+| `ollama`, `bedrock` | 5 (default) | Cheap enough to run several times. A model on these hosts can also be flakier reply to reply, so 1 pass is not enough to trust. |
+| `anthropic` | 3 | A paid frontier call, run 3 times so one odd reply cannot decide the row and no tie can arise. |
+| `openai` and every other provider | 1 | A paid frontier call. Extra passes would cost as much again for little gain in trust. |
 
 For a repeated item, the runner runs the full pipeline — reply, gate, judge —
-once per pass, then takes the verdict most passes reached. A tie (an even
-split, for example 5 fail out of 10) breaks toward `fail`. This is a
+once per pass, then takes the verdict most passes reached. With the default of
+5 passes there is no even split; a tie can only arise under an even `--repeats`
+value, and it breaks toward `fail`. This is a
 deliberate exception to `docs/method.md`, which says a false positive costs
 more everywhere else in the run — the choice here is to let an even split
 surface as a finding for a person to look at, rather than let it resolve
 silently toward `pass`. Every pass is kept in the transcript under `repeats`,
-so a reader can see the 10 replies and 10 verdicts behind the one final
+so a reader can see the 5 replies and 5 verdicts behind the one final
 verdict, not just the final verdict itself.
 
 `--repeats <N>` overrides the default for any provider, including the ones
@@ -105,7 +113,7 @@ python -m fincon_runner run \
   --repeats 3 \
   --out ../submissions
 
-# Run Ollama Cloud once instead of 10 times, for a quick smoke test.
+# Run Ollama Cloud once instead of 5 times, for a quick smoke test.
 python -m fincon_runner run \
   --dataset ../datasets/benchmark-open.csv \
   --assistant ollama-smoke-test \
@@ -114,7 +122,7 @@ python -m fincon_runner run \
   --out ../submissions
 ```
 
-The 10 passes for a repeated item run one after another, not at once. Use
+The passes for a repeated item run one after another, not at once. Use
 `--concurrency` to control how many items are in flight; it does not change how
 many passes one item runs.
 
@@ -206,6 +214,24 @@ Two prompt rules protect the run:
 The run works with `--judge none`. Items no check decided are recorded as
 `ungraded`, never as passes.
 
+### Two judges and a tiebreak
+
+`--judge A --judge2 B --tiebreak C` marks every reply with A and B, one after
+the other. When they agree, that is the verdict. When they differ, C marks the
+reply and its verdict stands. All three answers are kept on the pass (`judge`,
+`judge2`, `tiebreak`) with a `tiebreak_used` flag, and such a pass has
+`decided_by: tiebreak`. The item row carries the representative pass's
+answers, `tiebreak_used` set when any pass was contested, and
+`tiebreak_passes`, the number of passes that were. The leaderboard counts a
+tiebreak decision as a judge decision. A pass where A and B both fail to answer is an
+`error` and C is not spent on it; `pipeline/rejudge_errors.py` re-runs such
+rows. `--judge2` without `--tiebreak` is refused.
+
+`pipeline/rejudge_all.py <run-dir> --judge A --judge2 B --tiebreak C` marks
+every row of an existing run again under the new judges, on the stored reply,
+without calling the contestant. It is resumable (`transcript.rejudge.jsonl`)
+and reads each row's permissions from the dataset, not from the old record.
+
 ## Permissions and the threshold
 
 `docs/rubric.md` says the product recommendation threshold is a property of the
@@ -241,6 +267,12 @@ is a convention of this repository, not something the harness enforces.
 | `report.md` | The same run in human words. Findings first, highest product risk first. |
 
 The finding record follows the shape in `docs/method.md`.
+
+An existing run directory is never overwritten. `--append` grades only the
+items the transcript does not hold yet and adds them to the end; `run.json`
+records each append under `appended` and the leaderboard and report are
+rebuilt over every line. Without `--append`, a run whose transcript exists
+stops with an error.
 
 ## The other subcommands
 

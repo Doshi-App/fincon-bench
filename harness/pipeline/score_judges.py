@@ -16,6 +16,12 @@ many of the labelled rows that was, and `error_rate` how often it failed to
 answer. A judge that skips the hard rows can flatter itself on the rest, so read
 the headline next to the coverage.
 
+**Every point estimate carries a 95 percent bootstrap interval** (`*_lo`, `*_hi`).
+The labelled rows are resampled with replacement `--bootstrap` times and the
+metric recomputed each time. With a pass class of 8 rows the interval on
+macro-F1 is about 0.3 wide, so the script says so when the top two judges'
+intervals overlap, and the paper (section 7.5) does not declare a winner there.
+
 Usage:
     python harness/pipeline/score_judges.py submissions/judges/<run-id>/transcript.jsonl ... \
         --labels harness/pipeline/human-labels.csv --out results/judge_selection.csv
@@ -27,8 +33,12 @@ import argparse
 import csv
 import json
 import math
+import random
 from collections import Counter
 from pathlib import Path
+
+INTERVAL_METRICS = ("macro_f1", "balanced_accuracy", "mcc")
+DEFAULT_BOOTSTRAP = 2000
 
 # An `arguable` verdict is not a third label. The rubric says a false positive
 # costs more than a missed finding, so an arguable reply is not a finding.
@@ -42,6 +52,33 @@ def load_labels(path: Path) -> dict[str, str]:
             for row in csv.DictReader(fh)
             if row.get("human_label", "").strip().lower() in ("pass", "fail")
         }
+
+
+def model_family(spec: str) -> str:
+    """Reduce a judge spec or a source model name to a comparable family key.
+
+    `ollama:deepseek-v4-flash:0731`, `deepseek-v4-flash:preview` and
+    `deepseek-v4-flash` all map to `deepseek-v4-flash`. A judge must not be
+    scored on a reply its own family wrote, so both sides go through this.
+    """
+    name = spec.strip().lower()
+    if name.startswith(("bedrock:", "ollama:", "anthropic:", "openai:")):
+        name = name.split(":", 1)[1]
+    name = name.split("@", 1)[0]
+    name = name.split(":", 1)[0]
+    return name
+
+
+def load_own_replies(paths: list[Path]) -> dict[str, str]:
+    """item_id -> family of the model that wrote that row's reply."""
+    owners: dict[str, str] = {}
+    for path in paths:
+        with path.open(newline="", encoding="utf-8") as fh:
+            for row in csv.DictReader(fh):
+                model = (row.get("source_model") or "").strip()
+                if model:
+                    owners[row["item_id"].strip()] = model_family(model)
+    return owners
 
 
 def load_transcript(path: Path) -> tuple[str, dict[str, dict]]:
@@ -115,6 +152,37 @@ def score(pairs: list[tuple[str, str]]) -> dict:
     }
 
 
+def bootstrap(pairs: list[tuple[str, str]], draws: int, seed: int) -> dict:
+    """95 percent percentile intervals for the interval metrics.
+
+    Rows are resampled with replacement, so a row the judge did not decide is
+    never resampled in — the interval describes the rows that were compared.
+    """
+    if not pairs or draws <= 0:
+        return {}
+    rng = random.Random(seed)
+    samples: dict[str, list[float]] = {metric: [] for metric in INTERVAL_METRICS}
+    n = len(pairs)
+    for _ in range(draws):
+        resampled = [pairs[rng.randrange(n)] for _ in range(n)]
+        scored = score(resampled)
+        for metric in INTERVAL_METRICS:
+            samples[metric].append(scored[metric])
+    out = {}
+    for metric, values in samples.items():
+        values.sort()
+        out[f"{metric}_lo"] = round(values[int(0.025 * (draws - 1))], 4)
+        out[f"{metric}_hi"] = round(values[int(0.975 * (draws - 1))], 4)
+    return out
+
+
+def intervals_overlap(a: dict, b: dict, metric: str = "macro_f1") -> bool:
+    """True when the two judges' intervals on `metric` share any value."""
+    return a.get(f"{metric}_lo", 0.0) <= b.get(f"{metric}_hi", 0.0) and b.get(
+        f"{metric}_lo", 0.0
+    ) <= a.get(f"{metric}_hi", 0.0)
+
+
 def judge_label(record: dict) -> tuple[str, str]:
     """Map one transcript record to a pass/fail call, or say why it has none."""
     verdict = (record.get("judge", {}).get("verdict") or "").strip().lower()
@@ -134,11 +202,22 @@ def judge_label(record: dict) -> tuple[str, str]:
     return "", "ungraded"
 
 
-def score_run(path: Path, labels: dict[str, str], name_override: str = "") -> dict:
+def score_run(
+    path: Path,
+    labels: dict[str, str],
+    name_override: str = "",
+    draws: int = DEFAULT_BOOTSTRAP,
+    seed: int = 0,
+    own_replies: dict[str, str] | None = None,
+) -> dict:
     judge_name, records = load_transcript(path)
+    family = model_family(name_override or judge_name or path.parent.name)
     pairs: list[tuple[str, str]] = []
     reasons: Counter = Counter()
     for item_id, human in labels.items():
+        if own_replies and own_replies.get(item_id) == family:
+            reasons["own_reply"] += 1
+            continue
         record = records.get(item_id)
         if record is None:
             reasons["absent"] += 1
@@ -151,23 +230,26 @@ def score_run(path: Path, labels: dict[str, str], name_override: str = "") -> di
 
     row = {"judge": name_override or judge_name or path.parent.name}
     row.update(score(pairs))
+    row.update(bootstrap(pairs, draws, seed))
     labelled = len(labels)
     row["labelled_rows"] = labelled
     row["coverage"] = round(len(pairs) / labelled, 4) if labelled else 0.0
     row["arguable"] = reasons["arguable"]
     row["error_rate"] = round(reasons["error"] / labelled, 4) if labelled else 0.0
     row["ungraded"] = reasons["ungraded"] + reasons["absent"]
+    row["own_replies_skipped"] = reasons["own_reply"]
     row["transcript"] = str(path)
     return row
 
 
-def baseline_rows(labels: dict[str, str]) -> list[dict]:
+def baseline_rows(labels: dict[str, str], draws: int = DEFAULT_BOOTSTRAP, seed: int = 0) -> list[dict]:
     """Two degenerate judges, so the imbalance trap is on the page."""
     rows = []
     for name, call in (("baseline:always-fail", "fail"), ("baseline:always-pass", "pass")):
         pairs = [(human, call) for human in labels.values()]
         row = {"judge": name}
         row.update(score(pairs))
+        row.update(bootstrap(pairs, draws, seed))
         row["labelled_rows"] = len(labels)
         row["coverage"] = 1.0
         row["arguable"] = 0
@@ -179,11 +261,13 @@ def baseline_rows(labels: dict[str, str]) -> list[dict]:
 
 
 FIELDS = [
-    "rank", "judge", "macro_f1", "cohens_kappa", "mcc", "balanced_accuracy",
+    "rank", "judge", "macro_f1", "macro_f1_lo", "macro_f1_hi", "cohens_kappa",
+    "mcc", "mcc_lo", "mcc_hi", "balanced_accuracy", "balanced_accuracy_lo",
+    "balanced_accuracy_hi",
     "accuracy", "fail_precision", "fail_recall", "fail_f1", "pass_precision",
     "pass_recall", "pass_f1", "tp_fail", "tn_pass", "fp_false_finding",
     "fn_missed_finding", "compared", "coverage", "labelled_rows", "arguable",
-    "error_rate", "ungraded", "transcript",
+    "error_rate", "ungraded", "own_replies_skipped", "transcript",
 ]
 
 
@@ -192,16 +276,28 @@ def main() -> int:
     parser.add_argument("transcript", nargs="+")
     parser.add_argument("--labels", default="harness/pipeline/human-labels.csv")
     parser.add_argument("--out", default="results/judge_selection.csv")
+    parser.add_argument(
+        "--bootstrap", type=int, default=DEFAULT_BOOTSTRAP,
+        help=f"Resamples for the 95 percent intervals. Default {DEFAULT_BOOTSTRAP}. 0 turns them off.",
+    )
+    parser.add_argument("--seed", type=int, default=0, help="Seed for the resampling. Default 0.")
+    parser.add_argument(
+        "--own-replies", nargs="*", default=sorted(str(p) for p in Path("harness/pipeline").glob("pass-candidates-hints*.csv")),
+        help="Hints files naming which model wrote each model-written row. A judge is not scored "
+             "on rows its own model family wrote. Default: harness/pipeline/pass-candidates-hints*.csv.",
+    )
     args = parser.parse_args()
+    own_replies = load_own_replies([Path(p) for p in args.own_replies]) if args.own_replies else {}
 
     labels = load_labels(Path(args.labels))
     if not labels:
         print("No human labels found.")
         return 1
 
-    rows = [score_run(Path(p), labels) for p in args.transcript]
+    rows = [score_run(Path(p), labels, draws=args.bootstrap, seed=args.seed, own_replies=own_replies)
+            for p in args.transcript]
     rows = [r for r in rows if r.get("compared")]
-    rows += baseline_rows(labels)
+    rows += baseline_rows(labels, draws=args.bootstrap, seed=args.seed)
     # Macro-F1 decides, per the README. Coverage breaks a tie: a judge that
     # answered more rows earned the same number on more evidence.
     rows.sort(key=lambda r: (r.get("macro_f1", 0), r.get("coverage", 0)), reverse=True)
@@ -215,14 +311,31 @@ def main() -> int:
         writer.writeheader()
         writer.writerows(rows)
 
-    print(f"{len(labels)} human-labelled rows, {len(rows)} candidates.\n")
-    print(f"{'#':>2}  {'judge':<44} {'macroF1':>8} {'kappa':>7} {'MCC':>7} {'balAcc':>7} {'cov':>6}")
+    counts = Counter(labels.values())
+    print(f"{len(labels)} human-labelled rows ({counts['fail']} fail, {counts['pass']} pass), "
+          f"{len(rows)} candidates.\n")
+    print(f"{'#':>2}  {'judge':<44} {'macroF1':>8} {'95% interval':>14} {'kappa':>7} {'MCC':>7} {'balAcc':>7} {'cov':>6}")
     for row in rows:
+        interval = (
+            f"[{row['macro_f1_lo']:.2f}, {row['macro_f1_hi']:.2f}]" if "macro_f1_lo" in row else ""
+        )
         print(
-            f"{row['rank']:>2}  {row['judge']:<44} {row['macro_f1']:>8.4f} "
+            f"{row['rank']:>2}  {row['judge']:<44} {row['macro_f1']:>8.4f} {interval:>14} "
             f"{row['cohens_kappa']:>7.3f} {row['mcc']:>7.3f} "
             f"{row['balanced_accuracy']:>7.3f} {row['coverage']:>6.2f}"
         )
+
+    models = [r for r in rows if not r["judge"].startswith("baseline:")]
+    if len(models) >= 2 and "macro_f1_lo" in models[0]:
+        first, second = models[0], models[1]
+        if intervals_overlap(first, second):
+            print(
+                f"\nThe top two intervals overlap: this label set does not separate "
+                f"{first['judge']} from {second['judge']} on macro-F1. Do not declare a winner "
+                f"on this table alone (paper, section 7.5)."
+            )
+        else:
+            print(f"\n{first['judge']} is ahead of {second['judge']} outside the 95 percent interval.")
     print(f"\nWrote {out_path}")
     return 0
 

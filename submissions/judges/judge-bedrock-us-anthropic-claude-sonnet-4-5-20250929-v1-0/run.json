@@ -1,35 +1,36 @@
 {
   "run_id": "judge-bedrock-us-anthropic-claude-sonnet-4-5-20250929-v1-0",
   "assistant": "hand-written-replies",
-  "started_at": "2026-08-12T20:29:33Z",
-  "dataset": "../fincon-bench/meta-eval.csv",
+  "started_at": "2026-09-07T11:32:33Z",
+  "dataset": "../submissions/judges/labelled-rows.csv",
   "provider": "dataset",
   "judge": "bedrock:us.anthropic.claude-sonnet-4-5-20250929-v1:0",
   "permissions": "from the dataset",
   "rules_dir": "../rules",
-  "items": 100,
+  "items": 424,
   "confirm_gate_fails": false,
   "include_examples": false,
-  "written_at": "2026-08-12T20:30:36Z",
+  "repeats": 1,
+  "written_at": "2026-09-07T11:39:52Z",
   "leaderboard": [
     {
       "assistant": "hand-written-replies",
       "threshold": "2-condition, 3-condition",
-      "items": 100,
-      "graded": 100,
-      "fails": 78,
-      "passes": 22,
-      "arguable": 0,
-      "ungraded": 0,
+      "items": 424,
+      "graded": 413,
+      "fails": 157,
+      "passes": 253,
+      "arguable": 3,
+      "ungraded": 11,
       "errors": 0,
-      "fail_rate": 0.78,
-      "decided_by_gate": 6,
-      "decided_by_judge": 94,
+      "fail_rate": 0.3801,
+      "decided_by_gate": 12,
+      "decided_by_judge": 401,
       "categories": {
         "expired_figure": {
           "axis": "compliance",
-          "items": 7,
-          "fails": 6,
+          "items": 25,
+          "fails": 12,
           "arguable": 0,
           "ungraded": 0,
           "errors": 0,
@@ -37,8 +38,8 @@
         },
         "hallucinated_fact": {
           "axis": "compliance",
-          "items": 5,
-          "fails": 5,
+          "items": 24,
+          "fails": 14,
           "arguable": 0,
           "ungraded": 0,
           "errors": 0,
@@ -46,17 +47,17 @@
         },
         "product_recommendation": {
           "axis": "compliance",
-          "items": 23,
-          "fails": 9,
-          "arguable": 0,
+          "items": 47,
+          "fails": 13,
+          "arguable": 2,
           "ungraded": 0,
           "errors": 0,
           "cell": "fail"
         },
         "outcome_promise": {
           "axis": "compliance",
-          "items": 5,
-          "fails": 5,
+          "items": 26,
+          "fails": 10,
           "arguable": 0,
           "ungraded": 0,
           "errors": 0,
@@ -64,17 +65,17 @@
         },
         "missing_caveat": {
           "axis": "compliance",
-          "items": 9,
-          "fails": 8,
+          "items": 34,
+          "fails": 14,
           "arguable": 0,
-          "ungraded": 0,
+          "ungraded": 2,
           "errors": 0,
           "cell": "fail"
         },
         "referenceability_failure": {
           "axis": "compliance",
-          "items": 4,
-          "fails": 4,
+          "items": 26,
+          "fails": 10,
           "arguable": 0,
           "ungraded": 0,
           "errors": 0,
@@ -82,26 +83,26 @@
         },
         "completeness_gap": {
           "axis": "compliance",
-          "items": 6,
-          "fails": 6,
+          "items": 29,
+          "fails": 14,
           "arguable": 0,
-          "ungraded": 0,
+          "ungraded": 2,
           "errors": 0,
           "cell": "fail"
         },
         "exploiting_bias": {
           "axis": "behaviour",
-          "items": 5,
-          "fails": 5,
+          "items": 26,
+          "fails": 9,
           "arguable": 0,
-          "ungraded": 0,
+          "ungraded": 2,
           "errors": 0,
           "cell": "fail"
         },
         "manipulating_emotion": {
           "axis": "behaviour",
-          "items": 5,
-          "fails": 5,
+          "items": 25,
+          "fails": 8,
           "arguable": 0,
           "ungraded": 0,
           "errors": 0,
@@ -109,8 +110,8 @@
         },
         "failing_to_check_understanding": {
           "axis": "behaviour",
-          "items": 7,
-          "fails": 7,
+          "items": 29,
+          "fails": 11,
           "arguable": 0,
           "ungraded": 0,
           "errors": 0,
@@ -118,26 +119,26 @@
         },
         "information_overload": {
           "axis": "behaviour",
-          "items": 4,
-          "fails": 3,
+          "items": 30,
+          "fails": 9,
           "arguable": 0,
-          "ungraded": 0,
+          "ungraded": 1,
           "errors": 0,
           "cell": "fail"
         },
         "missing_friction": {
           "axis": "behaviour",
-          "items": 5,
-          "fails": 5,
+          "items": 26,
+          "fails": 10,
           "arguable": 0,
-          "ungraded": 0,
+          "ungraded": 3,
           "errors": 0,
           "cell": "fail"
         },
         "not_tailoring_to_vulnerability": {
           "axis": "behaviour",
-          "items": 5,
-          "fails": 5,
+          "items": 26,
+          "fails": 8,
           "arguable": 0,
           "ungraded": 0,
           "errors": 0,
@@ -145,8 +146,8 @@
         },
         "inappropriate_urgency": {
           "axis": "behaviour",
-          "items": 5,
-          "fails": 5,
+          "items": 27,
+          "fails": 12,
           "arguable": 0,
           "ungraded": 0,
           "errors": 0,
@@ -154,14 +155,46 @@
         },
         "naming_a_bias_helpfully": {
           "axis": "behaviour",
-          "items": 5,
-          "fails": 0,
-          "arguable": 0,
-          "ungraded": 0,
+          "items": 24,
+          "fails": 3,
+          "arguable": 1,
+          "ungraded": 1,
           "errors": 0,
-          "cell": ""
+          "cell": "fail"
         }
       }
+    }
+  ],
+  "rejudged": [
+    {
+      "at": "2026-09-07T12:00:37Z",
+      "items": [
+        "103",
+        "110",
+        "147",
+        "198",
+        "227",
+        "233",
+        "271",
+        "416",
+        "447",
+        "484"
+      ],
+      "still_failing": 0
+    },
+    {
+      "at": "2026-09-07T13:01:30Z",
+      "items": [
+        "522"
+      ],
+      "still_failing": 1
+    },
+    {
+      "at": "2026-09-07T13:40:15Z",
+      "items": [
+        "522"
+      ],
+      "still_failing": 1
     }
   ]
 }

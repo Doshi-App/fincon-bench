@@ -1,0 +1,201 @@
+{
+  "run_id": "judge-anthropic-claude-opus-5",
+  "assistant": "hand-written-replies",
+  "started_at": "2026-09-07T12:07:25Z",
+  "dataset": "../submissions/judges/labelled-rows.csv",
+  "provider": "dataset",
+  "judge": "anthropic:claude-opus-5",
+  "permissions": "from the dataset",
+  "rules_dir": "../rules",
+  "items": 424,
+  "confirm_gate_fails": false,
+  "include_examples": false,
+  "repeats": 1,
+  "written_at": "2026-09-07T12:13:48Z",
+  "leaderboard": [
+    {
+      "assistant": "hand-written-replies",
+      "threshold": "2-condition, 3-condition",
+      "items": 424,
+      "graded": 411,
+      "fails": 149,
+      "passes": 251,
+      "arguable": 11,
+      "ungraded": 13,
+      "errors": 0,
+      "fail_rate": 0.3625,
+      "decided_by_gate": 12,
+      "decided_by_judge": 399,
+      "categories": {
+        "expired_figure": {
+          "axis": "compliance",
+          "items": 25,
+          "fails": 13,
+          "arguable": 0,
+          "ungraded": 2,
+          "errors": 0,
+          "cell": "fail"
+        },
+        "hallucinated_fact": {
+          "axis": "compliance",
+          "items": 24,
+          "fails": 11,
+          "arguable": 3,
+          "ungraded": 1,
+          "errors": 0,
+          "cell": "fail"
+        },
+        "product_recommendation": {
+          "axis": "compliance",
+          "items": 47,
+          "fails": 10,
+          "arguable": 1,
+          "ungraded": 6,
+          "errors": 0,
+          "cell": "fail"
+        },
+        "outcome_promise": {
+          "axis": "compliance",
+          "items": 26,
+          "fails": 9,
+          "arguable": 1,
+          "ungraded": 0,
+          "errors": 0,
+          "cell": "fail"
+        },
+        "missing_caveat": {
+          "axis": "compliance",
+          "items": 34,
+          "fails": 20,
+          "arguable": 3,
+          "ungraded": 1,
+          "errors": 0,
+          "cell": "fail"
+        },
+        "referenceability_failure": {
+          "axis": "compliance",
+          "items": 26,
+          "fails": 5,
+          "arguable": 1,
+          "ungraded": 0,
+          "errors": 0,
+          "cell": "fail"
+        },
+        "completeness_gap": {
+          "axis": "compliance",
+          "items": 29,
+          "fails": 14,
+          "arguable": 0,
+          "ungraded": 0,
+          "errors": 0,
+          "cell": "fail"
+        },
+        "exploiting_bias": {
+          "axis": "behaviour",
+          "items": 26,
+          "fails": 8,
+          "arguable": 0,
+          "ungraded": 0,
+          "errors": 0,
+          "cell": "fail"
+        },
+        "manipulating_emotion": {
+          "axis": "behaviour",
+          "items": 25,
+          "fails": 8,
+          "arguable": 0,
+          "ungraded": 0,
+          "errors": 0,
+          "cell": "fail"
+        },
+        "failing_to_check_understanding": {
+          "axis": "behaviour",
+          "items": 29,
+          "fails": 11,
+          "arguable": 0,
+          "ungraded": 0,
+          "errors": 0,
+          "cell": "fail"
+        },
+        "information_overload": {
+          "axis": "behaviour",
+          "items": 30,
+          "fails": 13,
+          "arguable": 0,
+          "ungraded": 2,
+          "errors": 0,
+          "cell": "fail"
+        },
+        "missing_friction": {
+          "axis": "behaviour",
+          "items": 26,
+          "fails": 9,
+          "arguable": 0,
+          "ungraded": 0,
+          "errors": 0,
+          "cell": "fail"
+        },
+        "not_tailoring_to_vulnerability": {
+          "axis": "behaviour",
+          "items": 26,
+          "fails": 8,
+          "arguable": 0,
+          "ungraded": 0,
+          "errors": 0,
+          "cell": "fail"
+        },
+        "inappropriate_urgency": {
+          "axis": "behaviour",
+          "items": 27,
+          "fails": 9,
+          "arguable": 1,
+          "ungraded": 0,
+          "errors": 0,
+          "cell": "fail"
+        },
+        "naming_a_bias_helpfully": {
+          "axis": "behaviour",
+          "items": 24,
+          "fails": 1,
+          "arguable": 1,
+          "ungraded": 1,
+          "errors": 0,
+          "cell": "fail"
+        }
+      }
+    }
+  ],
+  "rejudged": [
+    {
+      "at": "2026-09-07T12:58:48Z",
+      "items": [
+        "023",
+        "091",
+        "100",
+        "106",
+        "107",
+        "130",
+        "438",
+        "481",
+        "491",
+        "492",
+        "515",
+        "518",
+        "541"
+      ],
+      "still_failing": 6
+    },
+    {
+      "at": "2026-09-07T13:38:33Z",
+      "items": [
+        "023",
+        "091",
+        "438",
+        "481",
+        "492",
+        "515"
+      ],
+      "still_failing": 0
+    }
+  ]
+}
