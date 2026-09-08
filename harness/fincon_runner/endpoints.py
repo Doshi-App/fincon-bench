@@ -21,6 +21,7 @@ import http.client
 import json
 import os
 import random
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -75,6 +76,9 @@ def _with_retries(call, attempts: int = 5, base: float = 2.0) -> dict:
                 continue
             if exc.code not in RETRYABLE and "hrottl" not in detail:
                 raise EndpointError(last) from None
+            if exc.code == 429:
+                # Visible in the run log, so throttling shows before it costs a row.
+                print(f"{time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} retry after HTTP 429 (attempt {attempt + 1}/{attempts})", file=sys.stderr, flush=True)
         except (
             urllib.error.URLError,
             TimeoutError,
