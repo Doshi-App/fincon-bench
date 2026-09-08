@@ -1,5 +1,6 @@
 """The retry loop: a spent usage window waits, a plain 429 backs off, a 4xx fails fast."""
 
+import http.client
 import io
 import unittest
 import urllib.error
@@ -64,3 +65,20 @@ class RetryTest(unittest.TestCase):
             with self.assertRaises(endpoints.EndpointError):
                 endpoints._with_retries(call, attempts=5)
         self.assertEqual(calls["n"], 1)
+
+
+class TruncatedBodyTest(unittest.TestCase):
+    def test_a_truncated_response_body_is_retried_not_raised(self):
+        calls = {"n": 0}
+
+        def call():
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise http.client.IncompleteRead(b"partial")
+            if calls["n"] == 2:
+                raise ConnectionResetError("reset by peer")
+            return {"ok": True}
+
+        with mock.patch.object(endpoints.time, "sleep"):
+            self.assertEqual(endpoints._with_retries(call, attempts=4), {"ok": True})
+        self.assertEqual(calls["n"], 3)

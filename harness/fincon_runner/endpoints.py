@@ -17,6 +17,7 @@ transcript.
 
 from __future__ import annotations
 
+import http.client
 import json
 import os
 import random
@@ -74,7 +75,15 @@ def _with_retries(call, attempts: int = 5, base: float = 2.0) -> dict:
                 continue
             if exc.code not in RETRYABLE and "hrottl" not in detail:
                 raise EndpointError(last) from None
-        except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+        except (
+            urllib.error.URLError,
+            TimeoutError,
+            json.JSONDecodeError,
+            # A host that closes the connection mid-body (IncompleteRead,
+            # RemoteDisconnected) or resets it. All clear on a retry.
+            http.client.HTTPException,
+            ConnectionError,
+        ) as exc:
             last = f"{type(exc).__name__}: {exc}"
         attempt += 1
         if attempt < attempts:
