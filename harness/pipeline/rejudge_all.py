@@ -95,11 +95,22 @@ def main() -> int:
     parser.add_argument("--limit", type=int, help="Re-judge at most N rows this invocation (for a trial).")
     parser.add_argument("--dry-run", action="store_true", help="Count the work and stop. No call is made.")
     parser.add_argument("--finalize", action="store_true", help="Splice a finished sidecar and stop.")
+    parser.add_argument(
+        "--all-rows", action="store_true",
+        help="Also re-judge rows that already carry a two-judge record (`judge2`). By default such rows "
+             "were judged under the target scheme already and are carried over unchanged.",
+    )
     args = parser.parse_args()
 
     run_dir = Path(args.run_dir)
     run = json.loads((run_dir / "run.json").read_text(encoding="utf-8"))
+    # `run.json`'s judge field follows the latest append, so the judge the old
+    # rows were marked by is read off the rows themselves.
     previous_judge = run.get("judge", "")
+    for record in load_records(run_dir / "transcript.jsonl"):
+        if record.get("judge2") is None and (record.get("judge") or {}).get("model"):
+            previous_judge = record["judge"]["model"]
+            break
     if args.finalize:
         return finalize(run_dir, run, args)
 
@@ -107,19 +118,28 @@ def main() -> int:
     sidecar_path = run_dir / SIDECAR
     done = {r["item"]["item_id"] for r in load_records(sidecar_path)} if sidecar_path.exists() else set()
     todo = [r for r in records if r["item"]["item_id"] not in done]
+    carried = []
+    if not args.all_rows:
+        carried = [r for r in todo if r.get("judge2") is not None]
+        todo = [r for r in todo if r.get("judge2") is None]
     passes = sum(max(1, len(r.get("repeats") or [])) for r in todo)
     judged = sum(
         sum(1 for p in (r.get("repeats") or [r]) if p.get("reply") or (p is r and r.get("item", {}).get("reply")))
         for r in todo
     )
     print(
-        f"{run['run_id']}: {len(records)} rows, {len(done)} already re-judged, {len(todo)} to do "
+        f"{run['run_id']}: {len(records)} rows, {len(done)} already re-judged, {len(carried)} already under "
+        f"the two-judge scheme (carried over), {len(todo)} to do "
         f"({passes} passes, about {2 * judged} judge calls plus tiebreaks); previous judge `{previous_judge}`"
     )
-    if not todo:
-        return finalize(run_dir, run, args)
     if args.dry_run:
         return 0
+    if carried:
+        with sidecar_path.open("a", encoding="utf-8") as handle:
+            for record in carried:
+                handle.write(json.dumps(record, ensure_ascii=False) + "\n")
+    if not todo:
+        return finalize(run_dir, run, args)
     if args.limit:
         todo = todo[: args.limit]
 
@@ -157,7 +177,7 @@ def main() -> int:
         print("", file=sys.stderr)
     print(f"this invocation: {counter['done']} rows, {counter['tiebreaks']} tiebreak pass(es), {counter['errors']} row(s) in error")
 
-    remaining = len(records) - len(done) - counter["done"]
+    remaining = len(records) - len(done) - len(carried) - counter["done"]
     if remaining:
         print(f"{remaining} row(s) remain; re-run to continue. Sidecar: {sidecar_path}")
         return 0
