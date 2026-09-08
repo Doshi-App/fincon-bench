@@ -43,6 +43,12 @@ USAGE_LIMIT_MARK = "usage limit"
 USAGE_LIMIT_WAIT = int(os.environ.get("FINCON_USAGE_LIMIT_WAIT", "300"))
 USAGE_LIMIT_ATTEMPTS = 24
 
+# A plain throttle (HTTP 429 without the usage-limit message) gets its own,
+# longer budget: some Bedrock models carry a per-minute quota that a 30-second
+# backoff cannot outlast. Sleeps double from 2 s and are capped at 60 s.
+THROTTLE_ATTEMPTS = int(os.environ.get("FINCON_THROTTLE_ATTEMPTS", "10"))
+THROTTLE_MAX_SLEEP = 60.0
+
 
 class EndpointError(RuntimeError):
     """A call that failed after its retry budget was spent."""
@@ -60,6 +66,7 @@ def _with_retries(call, attempts: int = 5, base: float = 2.0) -> dict:
     """Back off on throttling. Fail fast on anything a retry cannot fix."""
     last = ""
     limit_waits = 0
+    throttles = 0
     attempt = 0
     while attempt < attempts:
         try:
@@ -74,11 +81,17 @@ def _with_retries(call, attempts: int = 5, base: float = 2.0) -> dict:
                     raise EndpointError(last) from None
                 time.sleep(USAGE_LIMIT_WAIT + random.uniform(0, 15))
                 continue
-            if exc.code not in RETRYABLE and "hrottl" not in detail:
+            if exc.code == 429 or "hrottl" in detail:
+                # A throttle. Longer, capped backoff on its own counter, so a
+                # per-minute quota does not exhaust the general retry budget.
+                throttles += 1
+                print(f"{time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} retry after HTTP {exc.code} throttle (attempt {throttles}/{THROTTLE_ATTEMPTS})", file=sys.stderr, flush=True)
+                if throttles >= THROTTLE_ATTEMPTS:
+                    raise EndpointError(last) from None
+                time.sleep(min(THROTTLE_MAX_SLEEP, base * (2 ** (throttles - 1))) + random.uniform(0, 1.5))
+                continue
+            if exc.code not in RETRYABLE:
                 raise EndpointError(last) from None
-            if exc.code == 429:
-                # Visible in the run log, so throttling shows before it costs a row.
-                print(f"{time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} retry after HTTP 429 (attempt {attempt + 1}/{attempts})", file=sys.stderr, flush=True)
         except (
             urllib.error.URLError,
             TimeoutError,
