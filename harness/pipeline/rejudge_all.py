@@ -36,6 +36,7 @@ from fincon_runner.rejudge import rejudge_record  # noqa: E402
 from fincon_runner.rules import RuleBook  # noqa: E402
 from fincon_runner.runner import RunConfig  # noqa: E402
 from fincon_runner.transcript import load_graded, load_records, now_stamp, render_report  # noqa: E402
+from rejudge_errors import unresolved  # noqa: E402
 
 SIDECAR = "transcript.rejudge.jsonl"
 
@@ -120,8 +121,11 @@ def main() -> int:
     todo = [r for r in records if r["item"]["item_id"] not in done]
     carried = []
     if not args.all_rows:
-        carried = [r for r in todo if r.get("judge2") is not None]
-        todo = [r for r in todo if r.get("judge2") is None]
+        # A row already under the two-judge scheme is carried over unchanged,
+        # unless one of its passes never reached a verdict (a judge seat that
+        # errored, for instance during an outage): that row is judged again.
+        carried = [r for r in todo if r.get("judge2") is not None and not unresolved(r)]
+        todo = [r for r in todo if not (r.get("judge2") is not None and not unresolved(r))]
     passes = sum(max(1, len(r.get("repeats") or [])) for r in todo)
     judged = sum(
         sum(1 for p in (r.get("repeats") or [r]) if p.get("reply") or (p is r and r.get("item", {}).get("reply")))
