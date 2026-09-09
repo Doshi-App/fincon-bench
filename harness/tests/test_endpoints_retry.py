@@ -95,3 +95,19 @@ class TruncatedBodyTest(unittest.TestCase):
         with mock.patch.object(endpoints.time, "sleep"):
             self.assertEqual(endpoints._with_retries(call, attempts=4), {"ok": True})
         self.assertEqual(calls["n"], 3)
+
+
+class MonthlyCreditsTest(unittest.TestCase):
+    def test_a_spent_monthly_credit_cap_waits_like_a_usage_limit(self):
+        calls = {"n": 0}
+
+        def call():
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise _http_error(429, '{"error":"usage credits auto reload monthly max reached, add usage credits"}')
+            return {"ok": True}
+
+        with mock.patch.object(endpoints.time, "sleep") as sleep, \
+                mock.patch.object(endpoints, "USAGE_LIMIT_WAIT", 300):
+            self.assertEqual(endpoints._with_retries(call, attempts=2), {"ok": True})
+        self.assertGreaterEqual(sleep.call_args_list[0].args[0], 300)

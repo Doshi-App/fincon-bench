@@ -39,7 +39,11 @@ RETRYABLE = (408, 429, 500, 502, 503, 504)
 # seconds, so such a call waits `USAGE_LIMIT_WAIT` seconds between tries, up to
 # `USAGE_LIMIT_ATTEMPTS` times, before it is recorded as an error. Set
 # FINCON_USAGE_LIMIT_WAIT=0 to disable the long wait.
-USAGE_LIMIT_MARK = "usage limit"
+# Both the session window ("session usage limit") and the monthly credit cap
+# ("usage credits auto reload monthly max reached") are spent-budget answers,
+# not throttling. Matched by these substrings, case-insensitively.
+USAGE_LIMIT_MARKS = ("usage limit", "usage credits")
+USAGE_LIMIT_MARK = USAGE_LIMIT_MARKS[0]  # kept for callers
 USAGE_LIMIT_WAIT = int(os.environ.get("FINCON_USAGE_LIMIT_WAIT", "300"))
 USAGE_LIMIT_ATTEMPTS = 24
 
@@ -74,9 +78,10 @@ def _with_retries(call, attempts: int = 5, base: float = 2.0) -> dict:
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", "replace")[:300]
             last = f"HTTP {exc.code}: {detail}"
-            if exc.code == 429 and USAGE_LIMIT_MARK in detail and USAGE_LIMIT_WAIT > 0:
-                # The window is spent. Wait it out; do not burn the retry budget.
+            if exc.code == 429 and any(m in detail.lower() for m in USAGE_LIMIT_MARKS) and USAGE_LIMIT_WAIT > 0:
+                # The budget is spent. Wait it out; do not burn the retry budget.
                 limit_waits += 1
+                print(f"{time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} usage limit: waiting {USAGE_LIMIT_WAIT}s (wait {limit_waits}/{USAGE_LIMIT_ATTEMPTS}): {detail[:120]}", file=sys.stderr, flush=True)
                 if limit_waits > USAGE_LIMIT_ATTEMPTS:
                     raise EndpointError(last) from None
                 time.sleep(USAGE_LIMIT_WAIT + random.uniform(0, 15))
