@@ -8,7 +8,7 @@ Authors: the FinCon Bench team, Doshi.
 
 ## Status of this version
 
-This is version v1.1. Sections 1 to 7 and 9 to 10 describe a built artifact. Section 8 now reports the first run: 100 of the 274 meta-eval rows are labelled by hand, a judge has been selected against them, and 51 models have been scored, published as 48 leaderboard rows once 3 exact same-model pairs across inference providers are merged into 1 row each. Section 7's agreement statistic is reported over those 100 rows.
+This is version v1.2. Sections 1 to 7 and 9 to 10 describe a built artifact. Section 8 reports two runs. In the first, v1.1 (2026-08-13), 100 of the 274 meta-eval rows were labelled by hand, one judge was selected against them, and 51 models were scored once each on 191 probes, published as 48 rows. In the second, v1.2 (2026-09-07 to 09), 424 meta-eval rows carry a label from two blind passes (one human, one model-assisted, adjudicated by a person), 28 candidate judges were scored against them, and 59 contestants were scored on 275 probes by a panel of two judges and a tiebreak, with repeats on the 84 newest probes, published as 56 rows. Section 7's agreement statistic is reported over the 424 rows.
 
 **These are preliminary numbers and section 8.4 says what they cannot carry.** In short: one judge, one pass, no repeat for variance; the frontier hosted models are absent because the account used had no entitlement to them; and the same weights served by two different inference providers can score several points apart — 5.8 points for the widest of the 3 merged pairs — which the leaderboard now averages into 1 row rather than publish as 2. A reader who takes the ordering of neighbouring rows as a quality ranking is reading more than this run supports.
 
@@ -470,8 +470,8 @@ Against an inter-labeller reference line rather than against truth, following He
 
 ### 7.3 The procedure
 
-1. All 544 rows in `meta-eval.csv` carry a pre-written reply: 274 written by hand, 120 written by a model to give the pass class coverage, and 150 written by leaderboard models in the 2026-08-13 run and drawn one per category and jurisdiction.
-2. The 274 hand-written rows and the 150 model-written rows are labelled pass or fail by two independent blind passes, working from the rule and the rubric. In v1.2 the passes are model-assisted and recorded as such.
+1. All 544 rows in `meta-eval.csv` carry a pre-written reply: 274 written by hand, 120 drafted by a model and authored by a person to give the pass class coverage, and 150 written by leaderboard models in the 2026-08-13 run and drawn one per category and jurisdiction.
+2. The 274 hand-written rows and the 150 model-written rows are labelled pass or fail by two independent blind passes, working from the rule and the rubric. In v1.2 one pass is a person's and the other is model-assisted; a person adjudicates every disagreement, and the adjudication is recorded.
 3. Disagreements are adjudicated against the rule text and the adjudication is recorded in the labels file. The pre-adjudication agreement (271 of 274 on the hand-written rows, 142 of 150 on the model-written rows) supplies the inter-labeller reference line.
 4. Candidate judge models mark the 424 labelled rows with no sight of the labels. A judge is not scored on rows its own model family wrote. In v1.2 there were 28 candidates: 14 through Bedrock, 9 through Ollama Cloud, 3 through the Anthropic API and 2 through the OpenAI API (`harness/pipeline/select_judge.sh`).
 5. Macro F1 is computed for each candidate against the labels, with a 95 percent bootstrap interval over 2,000 resamples of the rows.
@@ -554,7 +554,19 @@ The v1.1 judge choice rested on 100 rows, 8 of them pass, and the file behind it
 
 **What the run taught about the harness.** Ten candidate lanes lost verdicts to faults that were not the judge's: a greedy JSON extractor, output caps too small for models that think before answering, a throttled Ollama Cloud subscription, and a Bedrock account that had not submitted the Anthropic use-case form. Every affected row was re-run before scoring. Two judges that had been silent on the hardest rows lost ground once made to answer them, `claude-opus-5` from 0.954 to 0.947 and `glm-5.3-flash` from 0.952 to 0.941, which is the argument for never dropping a judge's failed rows from its score. The faults, their fixes and the cost of the run are in `docs/judge-selection-2026-09-07.md`.
 
-**What it does not settle.** The labels are model-assisted, with two blind passes and a recorded adjudication, and have not had a human second pass. The judge for the next leaderboard run is chosen on reliability and running cost among the overlapping five, and that choice will be recorded before the run.
+**What it does not settle.** Every label has had one human pass and one model-assisted pass, with a person adjudicating the disagreements, but the same person labelled the rows and authored the probes, and no second labeller has marked the set. Inter-labeller agreement therefore stays unmeasured (issue #3). The judge for the next leaderboard run is chosen on reliability and running cost among the overlapping five, and that choice will be recorded before the run.
+
+### 8.6 What v1.2 reports (2026-09-07 to 09): the board re-run under two judges
+
+The judge decision recorded before the run: judge A `deepseek-v4-pro` and judge B `glm-5.3-flash`, both on Ollama Cloud, mark every reply; `claude-opus-5` marks only the replies they disagree on, and its verdict stands there. Chosen on reliability first (0.958 and 0.941 macro-F1, right 98 per cent of the time when they agree) and running cost second (both on a subscription, the tiebreak on 5 per cent of passes). 1,975 of 36,533 passes (5.4 per cent) needed it.
+
+**What ran.** 59 contestants, the 53 of v1.1 plus the 6 paid-key models of phase 3, plus `kimi-k3` and `palmyra-x5`, which billing and rate limits had excluded. The 84 probes added by the pass-class rebalance were appended to every transcript at 5 passes on Bedrock and Ollama Cloud, 3 on the Anthropic API and 1 on the OpenAI API. The 191 older replies were not regenerated; they were re-judged on the stored reply. Every reply was graded under the permission its own system prompt declared, which corrects v1.1's use of the 2-condition test on the 144 rows that declared `investment_advice`.
+
+**The result.** 54 ranked rows from 80.0 per cent (`claude-sonnet-5`) to 58.6 per cent (`gpt-oss-20b`). Two rows are unranked for coverage below 80 per cent, neither a result about the model: `palmyra-x5` is rate-limited on the Bedrock account used (61 of 275 decided) and `deepseek-v4-flash:preview` was retired by Ollama Cloud on 2026-08-27 (the 84 new probes could not be answered). `results/leaderboard.csv` now publishes, per row, the mean and spread of the pass rate across repeat passes, computed over that row's own repeated items and reported with their count in `repeated_items`: 84 for most rows (the probes added in September), 275 for `kimi-k3` and `palmyra-x5`, which ran the whole set fresh, and 104 for `us.deepseek.r1` and 95 for `kimi-k2-thinking`, whose August rows without a reply were regenerated at 5 passes. It is the error bar 8.4.1 said this design lacked. The spread between the best and worst pass runs from 1 to 12 points across models, with a median near 5, which is wider than most gaps between neighbouring rows.
+
+**What it cost and what broke.** About 70,600 judge calls on the Ollama Cloud subscription, 1,975 Opus 5 tiebreaks (about $38), and about $35 of contestant replies. The run took 43 hours, 7 of them lost to two Ollama Cloud budget limits (a session window, then the monthly credit cap). Ollama Cloud allows about 13 concurrent requests per model on this account; the run measured it with a raw ramp and ran one below it. No judge failure was dropped: every pass without a verdict was re-run until the failure was the contestant's own, and the harness now waits out a spent budget rather than recording an error. Two reasoning models, `kimi-k2-thinking` and `gpt-oss-20b` on Bedrock, return an empty reply on a few probes inside the 1,024-token budget and stay recorded that way.
+
+**What it does not settle.** The 191 older replies are single-pass, so their rows carry no spread; the repeat statistics rest on the 84 new probes. `deepseek-v4-pro` and `claude-opus-5` grade their own rows and are flagged. The labels behind the judge choice are model-assisted with two blind passes. Next: the same board run through FCP, to measure per model what FCP changes.
 
 ## 9 Limitations
 
@@ -710,7 +722,7 @@ Collected in one place so a reader does not have to assemble it from nine sectio
 
 | Quantity | Status in v1.1 | Blocked on |
 |---|---|---|
-| Labels | 424 of 544 rows, two blind passes with adjudication (258 pass / 166 fail); v1.1 had 100 rows, one labeller (92 fail / 8 pass) | A human second pass on the model-assisted labels |
+| Labels | 424 of 544 rows, two blind passes (one human, one model-assisted) with human adjudication (258 pass / 166 fail); v1.1 had 100 rows, one labeller (92 fail / 8 pass) | A second labeller over the same rows |
 | Inter-labeller agreement | Not measured | A second labeller marking the same rows |
 | Judge macro F1 overall | v1.1: 0.8194 for `mistral-large-3-675b` over 100 rows. v1.2: 0.958 (0.94 to 0.98) for the leader over 424 rows | — |
 | Judge macro F1 per category | Not measured | Too few rows per category to support it |

@@ -372,7 +372,8 @@ def assemble(
         error=decider.reasoning if final == "error" else "",
         repeats=tuple(runs) if passes > 1 else (),
         repeat_tally=dict(tally) if passes > 1 else {},
-        judge2=representative.judge2,
+        judge2=representative.judge2
+        or next((run.judge2 for run in runs if run.judge2 is not None), None),
         tiebreak=tiebreak,
         tiebreak_used=bool(contested),
         tiebreak_passes=len(contested),

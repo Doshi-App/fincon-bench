@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CATEGORIES } from "@/lib/categories";
-import { JUDGES, WINNING_JUDGE, HAS_RESULTS } from "@/lib/results";
+import { JUDGES, JUDGE_PANEL, HAS_RESULTS, HAS_REPEATS, medianSpreadPct } from "@/lib/results";
 import { ActionTag, AxisTag } from "../components/tags";
 import { AxisExplainer } from "../components/axis-explainer";
 import { PipelineDiagram } from "../components/pipeline-diagram";
@@ -16,10 +16,12 @@ function Prose({ children }: { children: React.ReactNode }) {
 }
 
 export default function MethodologyPage() {
-  // WINNING_JUDGE (from leaderboard.csv) carries the inference-provider
-  // prefix, e.g. "bedrock:mistral...."; judge_selection.csv's own `judge`
+  // JUDGE_PANEL seats (from leaderboard.csv) carry the inference-provider
+  // prefix, e.g. "ollama:deepseek-v4-pro"; judge_selection.csv's own `judge`
   // column does not — endsWith is the match, not ===.
-  const isWinner = (judge: string) => WINNING_JUDGE === judge || WINNING_JUDGE.endsWith(`:${judge}`);
+  const seatOf = (judge: string) => JUDGE_PANEL.find((s) => s.model === judge || s.model.endsWith(`:${judge}`));
+  const isWinner = (judge: string) => seatOf(judge) !== undefined;
+  const medianSpread = medianSpreadPct();
   const judgeBars: BarDatum[] = JUDGES.filter((j) => !j.isBaseline)
     .slice(0, 8)
     .map((j) => {
@@ -29,7 +31,7 @@ export default function MethodologyPage() {
         label: `${d.maker} ${d.name}`,
         value: j.macroF1 * 100,
         emphasis: isWinner(j.judge),
-        meta: `κ ${j.kappa.toFixed(2)}`,
+        meta: `κ ${j.kappa.toFixed(2)}${seatOf(j.judge) ? ` · ${seatOf(j.judge)?.role}` : ""}`,
       };
     });
 
@@ -143,18 +145,22 @@ export default function MethodologyPage() {
 
       {HAS_RESULTS && judgeBars.length > 0 && (
         <section className="mt-14">
-          <h2 className="text-lg font-semibold tracking-tight">Choosing the judge</h2>
+          <h2 className="text-lg font-semibold tracking-tight">Choosing the judges</h2>
           <p className="mt-2 max-w-2xl text-sm text-muted">
-            Macro-F1 against the human labels on the meta-eval set. The highlighted bar won and
-            scores every leaderboard row.
+            Macro-F1 against the labels on the 424 labelled meta-eval rows, 28 candidates, the top 8
+            shown. The leading five sit inside one bootstrap interval, so the table does not name a
+            single winner. The highlighted bars are the seats on the panel that graded the current
+            leaderboard: two judges, chosen for reliability and running cost among the five, and a
+            tiebreak that marks only the replies they disagree on (about 5 percent of passes).
           </p>
           <div className="mt-5 rounded-lg border border-border p-5">
             <BarChart data={judgeBars} tone="accent" hasEmphasis max={100} formatValue={(v) => (v / 100).toFixed(2)} />
           </div>
           <p className="mt-3 text-xs text-muted">
-            Pass 1 cannot detect self-preference: every meta-eval reply is human-written, so no
-            candidate judge has anything of its own to recognise there. A judge can win pass 1
-            cleanly and still be soft on its own replies in pass 2.
+            Pass 1 guards against self-preference by exclusion, not detection: 274 meta-eval replies
+            are written by a person and 270 by models, and a candidate is never scored on rows its
+            own model family wrote. A judge can still be soft on its own replies in pass 2, so a
+            leaderboard row graded by a panel it sits on is flagged self-graded.
           </p>
         </section>
       )}
@@ -163,13 +169,40 @@ export default function MethodologyPage() {
         <h2 className="text-lg font-semibold tracking-tight">Read this before you quote a number</h2>
         <ul className="mt-3 space-y-2 text-sm text-muted">
           <li>
-            <span className="font-medium text-fg">1 judge, 1 pass, no repeat.</span> Nothing in the
-            current run ran twice to measure variance.
+            <span className="font-medium text-fg">The labels are one person&apos;s judgement plus a
+            model-assisted check.</span> Each of the 424 labelled rows had two blind passes, one by a
+            person and one model-assisted, and a person adjudicated the disagreements against the
+            rule text. The same person authored the probes. No second labeller has marked the set
+            yet, so inter-labeller agreement is not measured (issue #3).
           </li>
           <li>
-            <span className="font-medium text-fg">The judge is also a ranked contestant.</span> A
-            self-graded row is self-reported — see the <code>self_graded</code> flag on the
-            leaderboard, not a disqualifier on its own.
+            <span className="font-medium text-fg">Some probes were drafted by a model.</span> 120 of
+            the 394 probes, the ones added in September to give the pass class coverage, were
+            drafted by a model and then edited and approved one by one by a person. The other 274
+            were written by hand. The 150 replies written by leaderboard models exist only for
+            judge selection and never score an assistant.
+          </li>
+          <li>
+            <span className="font-medium text-fg">
+              {HAS_REPEATS ? "Repeats cover 84 of 275 probes." : "1 judge, 1 pass, no repeat."}
+            </span>{" "}
+            {HAS_REPEATS ? (
+              <>
+                The 84 September probes ran 5 passes on Bedrock and Ollama Cloud, 3 on the Anthropic
+                API and 1 on the OpenAI API, and the majority verdict is published. The 191 older
+                probes ran once. The spread column is the highest minus the lowest pass rate across
+                those passes{medianSpread !== null ? `, median ${medianSpread.toFixed(0)} points` : ""}; a gap smaller than that between two rows is
+                not a difference.
+              </>
+            ) : (
+              <>Nothing in the current run ran twice to measure variance.</>
+            )}
+          </li>
+          <li>
+            <span className="font-medium text-fg">Two of the judges are also ranked contestants.</span>{" "}
+            A row graded by a panel it sits on carries the <code>self_graded</code> flag on the
+            leaderboard; it is self-reported, not a disqualifier on its own. The flag matches the
+            exact model id. Rows from the same model family as a judge seat are not flagged.
           </li>
           <li>
             <span className="font-medium text-fg">Inference provider changes the score.</span> The

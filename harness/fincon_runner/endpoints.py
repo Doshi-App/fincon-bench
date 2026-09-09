@@ -21,6 +21,7 @@ import http.client
 import json
 import os
 import random
+import sys
 import time
 import urllib.error
 import urllib.request
@@ -38,9 +39,19 @@ RETRYABLE = (408, 429, 500, 502, 503, 504)
 # seconds, so such a call waits `USAGE_LIMIT_WAIT` seconds between tries, up to
 # `USAGE_LIMIT_ATTEMPTS` times, before it is recorded as an error. Set
 # FINCON_USAGE_LIMIT_WAIT=0 to disable the long wait.
-USAGE_LIMIT_MARK = "usage limit"
+# Both the session window ("session usage limit") and the monthly credit cap
+# ("usage credits auto reload monthly max reached") are spent-budget answers,
+# not throttling. Matched by these substrings, case-insensitively.
+USAGE_LIMIT_MARKS = ("usage limit", "usage credits")
+USAGE_LIMIT_MARK = USAGE_LIMIT_MARKS[0]  # kept for callers
 USAGE_LIMIT_WAIT = int(os.environ.get("FINCON_USAGE_LIMIT_WAIT", "300"))
 USAGE_LIMIT_ATTEMPTS = 24
+
+# A plain throttle (HTTP 429 without the usage-limit message) gets its own,
+# longer budget: some Bedrock models carry a per-minute quota that a 30-second
+# backoff cannot outlast. Sleeps double from 2 s and are capped at 60 s.
+THROTTLE_ATTEMPTS = int(os.environ.get("FINCON_THROTTLE_ATTEMPTS", "10"))
+THROTTLE_MAX_SLEEP = 60.0
 
 
 class EndpointError(RuntimeError):
@@ -59,6 +70,7 @@ def _with_retries(call, attempts: int = 5, base: float = 2.0) -> dict:
     """Back off on throttling. Fail fast on anything a retry cannot fix."""
     last = ""
     limit_waits = 0
+    throttles = 0
     attempt = 0
     while attempt < attempts:
         try:
@@ -66,14 +78,24 @@ def _with_retries(call, attempts: int = 5, base: float = 2.0) -> dict:
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", "replace")[:300]
             last = f"HTTP {exc.code}: {detail}"
-            if exc.code == 429 and USAGE_LIMIT_MARK in detail and USAGE_LIMIT_WAIT > 0:
-                # The window is spent. Wait it out; do not burn the retry budget.
+            if exc.code == 429 and any(m in detail.lower() for m in USAGE_LIMIT_MARKS) and USAGE_LIMIT_WAIT > 0:
+                # The budget is spent. Wait it out; do not burn the retry budget.
                 limit_waits += 1
+                print(f"{time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} usage limit: waiting {USAGE_LIMIT_WAIT}s (wait {limit_waits}/{USAGE_LIMIT_ATTEMPTS}): {detail[:120]}", file=sys.stderr, flush=True)
                 if limit_waits > USAGE_LIMIT_ATTEMPTS:
                     raise EndpointError(last) from None
                 time.sleep(USAGE_LIMIT_WAIT + random.uniform(0, 15))
                 continue
-            if exc.code not in RETRYABLE and "hrottl" not in detail:
+            if exc.code == 429 or "hrottl" in detail:
+                # A throttle. Longer, capped backoff on its own counter, so a
+                # per-minute quota does not exhaust the general retry budget.
+                throttles += 1
+                print(f"{time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())} retry after HTTP {exc.code} throttle (attempt {throttles}/{THROTTLE_ATTEMPTS})", file=sys.stderr, flush=True)
+                if throttles >= THROTTLE_ATTEMPTS:
+                    raise EndpointError(last) from None
+                time.sleep(min(THROTTLE_MAX_SLEEP, base * (2 ** (throttles - 1))) + random.uniform(0, 1.5))
+                continue
+            if exc.code not in RETRYABLE:
                 raise EndpointError(last) from None
         except (
             urllib.error.URLError,

@@ -40,19 +40,32 @@ class RetryTest(unittest.TestCase):
             with self.assertRaises(endpoints.EndpointError):
                 endpoints._with_retries(call, attempts=2)
 
-    def test_a_plain_429_uses_the_short_backoff(self):
+    def test_a_plain_429_backs_off_and_outlasts_the_general_budget(self):
+        # Eight throttles in a row, more than the general 5 attempts, still
+        # succeed: throttles have their own counter and a capped sleep.
         calls = {"n": 0}
 
         def call():
             calls["n"] += 1
-            if calls["n"] == 1:
+            if calls["n"] <= 8:
                 raise _http_error(429, "Too many requests")
             return {"ok": True}
 
         with mock.patch.object(endpoints.time, "sleep") as sleep:
-            endpoints._with_retries(call, attempts=3, base=2.0)
-        self.assertEqual(len(sleep.call_args_list), 1)
-        self.assertLess(sleep.call_args_list[0].args[0], 10)
+            self.assertEqual(endpoints._with_retries(call, attempts=5, base=2.0), {"ok": True})
+        waits = [c.args[0] for c in sleep.call_args_list]
+        self.assertEqual(len(waits), 8)
+        self.assertLess(waits[0], 10)
+        self.assertLessEqual(max(waits), endpoints.THROTTLE_MAX_SLEEP + 1.5)
+
+    def test_a_throttle_that_never_clears_is_an_error(self):
+        def call():
+            raise _http_error(429, "Too many requests")
+
+        with mock.patch.object(endpoints.time, "sleep"), \
+                mock.patch.object(endpoints, "THROTTLE_ATTEMPTS", 3):
+            with self.assertRaises(endpoints.EndpointError):
+                endpoints._with_retries(call, attempts=5)
 
     def test_a_404_fails_without_retrying(self):
         calls = {"n": 0}
@@ -82,3 +95,19 @@ class TruncatedBodyTest(unittest.TestCase):
         with mock.patch.object(endpoints.time, "sleep"):
             self.assertEqual(endpoints._with_retries(call, attempts=4), {"ok": True})
         self.assertEqual(calls["n"], 3)
+
+
+class MonthlyCreditsTest(unittest.TestCase):
+    def test_a_spent_monthly_credit_cap_waits_like_a_usage_limit(self):
+        calls = {"n": 0}
+
+        def call():
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise _http_error(429, '{"error":"usage credits auto reload monthly max reached, add usage credits"}')
+            return {"ok": True}
+
+        with mock.patch.object(endpoints.time, "sleep") as sleep, \
+                mock.patch.object(endpoints, "USAGE_LIMIT_WAIT", 300):
+            self.assertEqual(endpoints._with_retries(call, attempts=2), {"ok": True})
+        self.assertGreaterEqual(sleep.call_args_list[0].args[0], 300)

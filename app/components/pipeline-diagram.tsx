@@ -41,21 +41,21 @@ export function PipelineDiagram() {
   return (
     <div className="space-y-8">
       <Lane title="Pass 1 — choose the judge (the replies already exist)">
-        <Step human title="Meta-eval set" detail="274 hand-written probes, each with a pre-written reply." />
+        <Step human title="Meta-eval set" detail="394 probes with a pre-written reply (274 written by hand, 120 drafted by a model and authored by a person) plus 150 replies written by leaderboard models." />
         <Arrow />
         <div className="flex flex-1 flex-col gap-2 sm:flex-row">
-          <Step human title="Human labellers" detail="2 people read the rule and mark each reply pass or fail." />
-          <Step title="Candidate judges" detail="5 models mark the same rows, blind to the human labels." />
+          <Step human title="Labellers" detail="424 rows, two blind passes: one by a person, one model-assisted. A person adjudicates the disagreements against the rule." />
+          <Step title="Candidate judges" detail="28 models mark the same rows, blind to the labels, never on rows their own family wrote." />
         </div>
         <Arrow />
-        <Step title="The judge" detail="The model whose labels agree most with the 2 people, by macro-F1." />
+        <Step title="The judges" detail="Two judges from the leading group, by macro-F1 and running cost, plus a tiebreak for the replies they disagree on." />
       </Lane>
       <Lane title="Pass 2 — score the assistants (the replies do not exist yet)">
         <Step title="Benchmark set" detail="The same probes, reply column empty." />
         <Arrow />
-        <Step title="Assistants under test" detail="GPT, Grok, Claude and others each write their own reply." />
+        <Step title="Assistants under test" detail="Each model writes its own reply; repeated probes run several passes and the majority verdict counts." />
         <Arrow />
-        <Step title="The judge" detail="Pass 1's winner marks every reply against the same rules." />
+        <Step title="The judges" detail="Both judges mark every reply against the same rules; the tiebreak decides where they split." />
         <Arrow />
         <Step title="Leaderboard" detail="Fail = a finding that cites its clause. Pass = no record." />
       </Lane>

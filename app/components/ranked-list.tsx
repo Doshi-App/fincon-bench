@@ -6,7 +6,7 @@ import { slugModel } from "./model-slug";
 import { describeModel, iconForMaker } from "./model-names";
 
 /** The classic 1-row-per-model view — a plain sorted table, no interactivity needed beyond what's already sortable in the source CSV. */
-export function RankedList({ rows, hasCostData }: { rows: LeaderboardRow[]; hasCostData: boolean }) {
+export function RankedList({ rows, hasCostData, hasRepeats = false }: { rows: LeaderboardRow[]; hasCostData: boolean; hasRepeats?: boolean }) {
   return (
     <div className="scroll-x rounded-lg border border-border">
       <table className="w-full min-w-[46rem] border-collapse text-left text-sm">
@@ -19,6 +19,11 @@ export function RankedList({ rows, hasCostData }: { rows: LeaderboardRow[]; hasC
             <th className="border-b border-border bg-surface-1 px-4 py-3 text-right font-medium">Compliance</th>
             <th className="border-b border-border bg-surface-1 px-4 py-3 text-right font-medium">Behaviour</th>
             <th className="border-b border-border bg-surface-1 px-4 py-3 text-right font-medium">Coverage</th>
+            {hasRepeats && (
+              <th className="border-b border-border bg-surface-1 px-4 py-3 text-right font-medium" title="Highest minus lowest pass rate across the repeat passes on the repeated probes. Blank when every probe ran once.">
+                Spread
+              </th>
+            )}
             {hasCostData && <th className="border-b border-border bg-surface-1 px-4 py-3 text-right font-medium">Cost / pass</th>}
           </tr>
         </thead>
@@ -36,7 +41,7 @@ export function RankedList({ rows, hasCostData }: { rows: LeaderboardRow[]; hasC
                   </span>
                 </Link>
                 {r.selfGraded && (
-                  <span className="ml-2 rounded-full bg-arguable/20 px-1.5 py-0.5 text-[10px] text-arguable">judge</span>
+                  <span className="ml-2 rounded-full bg-arguable/20 px-1.5 py-0.5 text-[10px] text-arguable" title="This model also sits on the judge panel that graded this leaderboard.">judge</span>
                 )}
               </td>
               <td className="px-4 py-2.5 text-muted">{d.host}</td>
@@ -44,6 +49,11 @@ export function RankedList({ rows, hasCostData }: { rows: LeaderboardRow[]; hasC
               <td className="px-4 py-2.5 text-right tabular text-muted">{pct(r.compliancePassRate)}</td>
               <td className="px-4 py-2.5 text-right tabular text-muted">{pct(r.behaviourPassRate)}</td>
               <td className="px-4 py-2.5 text-right tabular text-muted">{pct(r.coverage)}</td>
+              {hasRepeats && (
+                <td className="px-4 py-2.5 text-right tabular text-muted">
+                  {r.passRateSpread === null ? "—" : `${(r.passRateSpread * 100).toFixed(1)} pts`}
+                </td>
+              )}
               {hasCostData && <td className="px-4 py-2.5 text-right tabular text-muted">{fmtUsd(r.estCostUsd1Pass)}</td>}
             </tr>
             );

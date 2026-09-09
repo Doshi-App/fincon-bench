@@ -68,6 +68,7 @@ const MODEL_TABLE: Record<string, { maker: string; name: string }> = {
   "gemma4:31b": { maker: "Google", name: "Gemma 4 31B" },
   "glm-5.1": { maker: "Zhipu AI", name: "GLM 5.1" },
   "glm-5.2": { maker: "Zhipu AI", name: "GLM 5.2" },
+  "glm-5.3-flash": { maker: "Zhipu AI", name: "GLM 5.3 Flash" },
   "google.gemma-3-12b-it": { maker: "Google", name: "Gemma 3 12B IT" },
   "google.gemma-3-27b-it": { maker: "Google", name: "Gemma 3 27B IT" },
   "gpt-5.4": { maker: "OpenAI", name: "GPT-5.4" },

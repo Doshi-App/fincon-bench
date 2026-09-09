@@ -481,6 +481,35 @@ class TwoJudgePanelTest(unittest.TestCase):
         self.assertEqual(row["tiebreak_rows"], 1)
         self.assertEqual(row["fails"], 1)
 
+    def test_an_error_row_keeps_the_flags_its_other_passes_earned(self):
+        # The provider fails on 2 of 3 passes, so the majority is `error` and
+        # the representative pass has no judges. The one judged pass was
+        # contested. The row must still say so.
+        class MostlyBroken(Provider):
+            name = "mostly-broken"
+
+            def __init__(self):
+                self.calls = 0
+
+            def reply_for(self, item):
+                self.calls += 1
+                if self.calls != 2:
+                    raise ProviderError("boom")
+                return Reply(item.reply)
+
+        a, b, c = SeatJudge("A", "pass"), SeatJudge("B", "fail"), SeatJudge("C", "pass")
+        graded = grade_item(bias_item(), config(repeats=3), MostlyBroken(), self.panel(a, b, c), RULES, FIGURES)
+        self.assertEqual(graded.final_verdict, "error")
+        self.assertTrue(graded.tiebreak_used)
+        self.assertEqual(graded.tiebreak_passes, 1)
+        self.assertIsNotNone(graded.judge2)
+        record = graded.as_finding_record()
+        self.assertIn("judge2", record)
+        self.assertTrue(record["tiebreak_used"])
+        self.assertEqual(record["tiebreak_passes"], 1)
+        self.assertEqual(record["tiebreak"]["model"], "C")
+        self.assertEqual(sum(1 for r in record["repeats"] if r.get("tiebreak_used")), record["tiebreak_passes"])
+
     def test_the_gate_still_beats_the_panel(self):
         a, b, c = SeatJudge("A", "pass"), SeatJudge("B", "pass"), SeatJudge("C", "pass")
         graded = grade_item(chat_item(), config(), DatasetProvider(), self.panel(a, b, c), RULES, FIGURES)
@@ -517,6 +546,28 @@ class TwoJudgePanelTest(unittest.TestCase):
         self.assertEqual(len(back.repeats), 3)
         self.assertTrue(back.repeats[0].tiebreak_used)
         self.assertEqual(back.rule.authority.source, graded.rule.authority.source)
+
+
+class ProductRiskRoundTripTest(unittest.TestCase):
+    def test_a_tiebreak_decided_row_keeps_its_product_risk_through_a_reload(self):
+        from fincon_runner.judge import JudgePanel
+        from fincon_runner.transcript import graded_from_record
+
+        class Risky(Judge):
+            def __init__(self, name, verdict, risk):
+                self.name = name; self.verdict = verdict; self.risk = risk
+
+            def mark(self, prompt):
+                return JudgeResult(verdict=self.verdict, model=self.name, product_risk=self.risk)
+
+        item = bias_item(item_id="060", category="product_recommendation", rule_id="")
+        graded = grade_item(item, config(), DatasetProvider(), JudgePanel(Risky("A", "pass", "low"), Risky("B", "fail", "medium"), Risky("C", "fail", "high")), RULES, FIGURES)
+        record = json.loads(json.dumps(graded.as_finding_record()))
+        self.assertEqual(record["decided_by"], "tiebreak")
+        self.assertEqual(record["product_risk"], "high")
+        back = graded_from_record(record)
+        self.assertEqual(back.as_finding_record()["product_risk"], "high")
+        self.assertEqual(back.tiebreak.product_risk, "high")
 
 
 class AppendTranscriptTest(unittest.TestCase):
