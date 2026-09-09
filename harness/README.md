@@ -76,8 +76,11 @@ provider. No key is ever written to a transcript.
 **History.** The leaderboard runs of 2026-08-12 and 2026-08-13 were made before
 repeats existed: every row in `results/model_outputs.csv` is a single pass. The
 default was set to 10 on 2026-09-01 and lowered to 5 on 2026-09-07, before any
-repeated run had been published. New rows run at 5; the old rows stay at 1 until
-the leaderboard is re-run in full, and `run.json` records the count for each run.
+repeated run had been published. The 2026-09-07 to 09 run appended the 84 new
+probes at the defaults (5, 3 and 1 by provider kind) and re-judged the 191
+older single-pass replies without regenerating them, so a transcript now mixes
+pass counts: `repeats` on the row says how many, and `run.json` records the
+count of each append under `appended`.
 
 `bedrock` and `ollama` are cheap or self-hosted. `anthropic` and `openai` are
 paid frontier keys, where every call costs real money. The runner treats them

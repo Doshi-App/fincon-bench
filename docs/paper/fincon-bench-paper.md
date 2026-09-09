@@ -556,6 +556,18 @@ The v1.1 judge choice rested on 100 rows, 8 of them pass, and the file behind it
 
 **What it does not settle.** The labels are model-assisted, with two blind passes and a recorded adjudication, and have not had a human second pass. The judge for the next leaderboard run is chosen on reliability and running cost among the overlapping five, and that choice will be recorded before the run.
 
+### 8.6 What v1.2 reports (2026-09-07 to 09): the board re-run under two judges
+
+The judge decision recorded before the run: judge A `deepseek-v4-pro` and judge B `glm-5.3-flash`, both on Ollama Cloud, mark every reply; `claude-opus-5` marks only the replies they disagree on, and its verdict stands there. Chosen on reliability first (0.958 and 0.941 macro-F1, right 98 per cent of the time when they agree) and running cost second (both on a subscription, the tiebreak on 5 per cent of passes). 1,953 of 36,533 passes needed it.
+
+**What ran.** 59 contestants, the 53 of v1.1 plus the 6 paid-key models of phase 3, plus `kimi-k3` and `palmyra-x5`, which billing and rate limits had excluded. The 84 probes added by the pass-class rebalance were appended to every transcript at 5 passes on Bedrock and Ollama Cloud, 3 on the Anthropic API and 1 on the OpenAI API. The 191 older replies were not regenerated; they were re-judged on the stored reply. Every reply was graded under the permission its own system prompt declared, which corrects v1.1's use of the 2-condition test on the 144 rows that declared `investment_advice`.
+
+**The result.** 54 ranked rows from 80.0 per cent (`claude-sonnet-5`) to 58.6 per cent (`gpt-oss-20b`). Two rows are unranked for coverage below 80 per cent, neither a result about the model: `palmyra-x5` is rate-limited on the Bedrock account used (61 of 275 decided) and `deepseek-v4-flash:preview` was retired by Ollama Cloud on 2026-08-27 (the 84 new probes could not be answered). `results/leaderboard.csv` now publishes, per row, the mean and spread of the pass rate across repeat passes over the repeated items, which is the error bar 8.4.1 said this design lacked. On the 84 repeated probes the spread between the best and worst pass runs from 1 to 12 points across models, with a median near 5, which is wider than most gaps between neighbouring rows.
+
+**What it cost and what broke.** About 70,600 judge calls on the Ollama Cloud subscription, 1,975 Opus 5 tiebreaks (about $38), and about $35 of contestant replies. The run took 43 hours, 7 of them lost to two Ollama Cloud budget limits (a session window, then the monthly credit cap). Ollama Cloud allows about 13 concurrent requests per model on this account; the run measured it with a raw ramp and ran one below it. No judge failure was dropped: every pass without a verdict was re-run until the failure was the contestant's own, and the harness now waits out a spent budget rather than recording an error. Two reasoning models, `kimi-k2-thinking` and `gpt-oss-20b` on Bedrock, return an empty reply on a few probes inside the 1,024-token budget and stay recorded that way.
+
+**What it does not settle.** The 191 older replies are single-pass, so their rows carry no spread; the repeat statistics rest on the 84 new probes. `deepseek-v4-pro` and `claude-opus-5` grade their own rows and are flagged. The labels behind the judge choice are model-assisted with two blind passes. Next: the same board run through FCP, to measure per model what FCP changes.
+
 ## 9 Limitations
 
 ### 9.1 The authors sell a product that appears on the leaderboard

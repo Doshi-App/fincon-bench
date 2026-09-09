@@ -1,17 +1,110 @@
+# Run of 2026-09-07 to 2026-09-09 (v1.2) — two judges, repeats, permissions from the row
+
+The four CSVs in this directory now describe this run. Everything from "Run of
+2026-08-13" downward describes the earlier run as it was, and is kept as history.
+
+## What changed against the 2026-08-13 run
+
+- **Judges.** Every reply is marked by two judges, `ollama:deepseek-v4-pro`
+  (judge A) and `ollama:glm-5.3-flash` (judge B). When they agree, that is the
+  verdict. When they disagree, `anthropic:claude-opus-5` marks the reply and
+  decides. The choice and its cost are in `docs/judge-selection-2026-09-07.md`.
+  1,953 of 36,533 passes (5.3 percent) needed the tiebreak. Two rows are
+  self-graded and flagged: `deepseek-v4-pro` (judge A) and `claude-opus-5`
+  (the tiebreak).
+- **Probes.** 275 open probes, up from 191. The 84 added on 2026-09-01 (the
+  pass-class rebalance, one compliant reply per category, jurisdiction and
+  permission) were appended to every existing transcript; nothing was
+  regenerated for the old 191.
+- **Repeats.** The 84 new probes ran 5 passes on Bedrock and Ollama Cloud, 3 on
+  the Anthropic API and 1 on the OpenAI API, with the majority verdict
+  published and every pass kept under `repeats`. The 191 older probes keep
+  their single 2026-08-13 reply. `leaderboard.csv` carries `repeated_items`,
+  `pass_rate_mean` and `pass_rate_spread`: the pass rate of each repeat pass
+  over the repeated items, its mean and its highest-minus-lowest spread (issue
+  #30). Single-pass models have blanks there.
+- **Permissions.** The 2026-08-13 run graded every reply under `--permissions
+  none`, the 2-condition test, although 144 of the 275 dataset rows declare
+  `investment_advice` in the system prompt the model actually saw. This run
+  reads the permission from the row: 8,496 of the 16,225 model-item rows are
+  graded under the 3-condition test.
+- **The old rows were re-judged.** All 10,770 single-pass rows from 2026-08-13
+  were marked again by the new judges on their stored reply, under the row's
+  own permission, so the whole board is one judging scheme. 35 of those rows
+  had no stored reply (an August 429 or an empty reply) and were regenerated.
+- **Two new contestants.** `ollama:kimi-k3` and `bedrock:us.writer.palmyra-x5-v1:0`,
+  both excluded in August for billing and rate limits, ran all 275 probes.
+
+## The board
+
+59 contestants: 35 through Bedrock, 18 through Ollama Cloud, 3 through the
+Anthropic API, 3 through the OpenAI API. 3 same-weights pairs fold into 1 row
+each, so `leaderboard.csv` holds 56 rows, 54 of them ranked. Pass rates on the
+ranked rows run from 80.0 percent (`claude-sonnet-5`) to 58.6 percent
+(`gpt-oss-20b`). `model_outputs.csv` carries all 16,225 model-item rows,
+unmerged, with both judges' verdicts, the tiebreak verdict where it ran, the
+`tiebreak` flag, the pass count and the number of contested passes.
+
+Two rows are unranked, coverage under 80 percent, and neither is a result about
+the model:
+
+- **`bedrock:us.writer.palmyra-x5-v1:0` — 61 of 275 decided.** Bedrock returns
+  HTTP 429 on most calls to this model on this account even at 1 or 2 in
+  flight (issue #19). 214 rows never got a reply; a repair was stopped after it
+  reached retry 5 of 10 on two thirds of the rows it tried.
+- **`ollama:deepseek-v4-flash:preview` — 191 of 275 decided.** Ollama Cloud
+  retired the tag on 2026-08-27 (HTTP 410), so the 84 new probes could not be
+  answered. Its 191 August replies were re-judged and stand. `deepseek-v4-flash:0731`
+  is the current tag and is ranked.
+
+Three further caveats.
+
+- **Two reasoning models return nothing on a few probes** within the
+  1,024-token reply budget: `moonshot.kimi-k2-thinking` (1 row in error, 3 with
+  an empty pass) and `openai.gpt-oss-20b-1:0` (4 rows in error, 5 with an empty
+  pass). Regenerating them reproduces it. The rows stay as recorded and count
+  against coverage; both remain ranked.
+- **The cost and time columns from "Phase 4" are not carried for this run.**
+  The transcripts now hold appended runs with mixed pass counts, so the
+  wall-clock arithmetic behind `avg_time_s_1pass` no longer holds, and two new
+  models have no published price. `avg_reply_tokens` is still computed.
+- **Judge failures were never dropped.** Every pass where a judge seat failed
+  for a reason other than the rubric (a spent Ollama usage window at 21:00 UTC
+  on 2026-09-07, an exhausted monthly credit cap from 02:40 to 09:15 UTC on
+  2026-09-09, concurrency throttles, malformed JSON) was re-run until it had a
+  verdict or the failure was the contestant's own. The harness now waits out a
+  spent budget instead of recording an error (`harness/fincon_runner/endpoints.py`).
+
+## Cost and throughput
+
+Contestant replies: about 22,400 new replies plus 35 regenerated August rows and
+the 2 full new contestants. Judging: 70,574 judge A and B calls on the Ollama
+Cloud subscription and 1,975 Opus 5 tiebreak calls, about $38 at list price.
+Bedrock and the Anthropic and OpenAI contestant lanes came to roughly $35.
+
+Ollama Cloud set the pace. Its account allows about 13 concurrent requests per
+model, measured with a raw ramp during the run, and throughput saturates well
+before that: a two-judge pass on a real reply costs about 13 seconds at 2 in
+flight, dominated by GLM 5.3 Flash's thinking. The run took 43 hours wall
+clock from 15:43 UTC on 2026-09-07, of which about 7 hours were the two Ollama
+budget outages.
+
+## Reproducing this run
+
+`harness/pipeline/score_contestants.sh` and `run_paid_keys.sh` take the three
+judge specs and append to existing transcripts; `harness/pipeline/rejudge_all.py`
+re-judges a run's stored replies under new judges; `rejudge_errors.py --unresolved`
+regenerates any row with a pass that reached no verdict; `build_outputs.py`
+takes `--judge`, `--judge2` and `--tiebreak`. See `harness/README.md`.
+
+---
+
 # Run of 2026-08-13 (v1.1-preliminary) — judge selection, then the leaderboard
 
-> **Judge selection was re-run on 2026-09-07.** 28 candidate judges marked 424
-> labelled rows (258 pass, 166 fail) and `judge_selection.csv` now holds that
-> run, with 95 percent bootstrap intervals. `ollama:deepseek-v4-pro` leads on
-> macro-F1 at 0.958 with full coverage; `claude-opus-5`, `gpt-5.6-terra`,
-> `claude-sonnet-5` and `glm-5.3-flash` sit inside its interval, and
-> `mistral-large-3`, the judge of the leaderboard below, is at rank 17 with
-> 0.924. The labels are published in `harness/pipeline/human-labels-claude.csv`,
-> so this selection can be re-derived. The judge for the next leaderboard run
-> is not yet chosen. Cost, failures and the run plan are in
-> `docs/judge-selection-2026-09-07.md`. Everything below this note describes
-> the 2026-08-13 run as it was.
-
+> **Superseded.** The CSVs in this directory now hold the 2026-09-07 to 09 run
+> described above. This section is the record of the 2026-08-13 run as it was.
+> Judge selection was re-run on 2026-09-07 on 424 labelled rows; see
+> `docs/judge-selection-2026-09-07.md`.
 
 ## Read this before you quote a number
 
