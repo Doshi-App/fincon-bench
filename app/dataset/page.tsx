@@ -55,9 +55,11 @@ export default function DatasetPage() {
     <div className="mx-auto max-w-6xl px-6 py-14">
       <h1 className="text-3xl font-semibold tracking-tight">The dataset</h1>
       <p className="mt-4 max-w-2xl text-muted">
-        1 set of 274 probes, applied in 2 phases. Phase 1 picks the judge on the meta-eval set,
+        1 set of 394 probes, applied in 2 phases. Phase 1 picks the judges on the meta-eval set,
         where every reply already exists. Phase 2 reuses the same probes with the reply column
-        removed, sends each one to every assistant under test, and scores what comes back.
+        removed, sends each one to every assistant under test, and scores what comes back. 274
+        probes were written by hand; 120, added in September to give the pass class coverage, were
+        drafted by a model and then edited and approved one by one by a person.
       </p>
 
       <div className="mt-8">
@@ -73,7 +75,7 @@ export default function DatasetPage() {
         <DatasetSection
           title="Meta-eval set"
           file="meta-eval.csv"
-          purpose="Picks the judge. Human labellers and 5 candidate judge models mark the same pre-written replies; whichever model agrees most becomes the judge for phase 2."
+          purpose="Picks the judges. 424 rows carry a label from two blind passes (one by a person, one model-assisted, disagreements adjudicated by a person); 28 candidate judges mark the same rows, and the leading group supplies the panel for phase 2. The 150 rows whose replies were written by leaderboard models exist only here."
           info={META_EVAL}
         />
         <DatasetSection

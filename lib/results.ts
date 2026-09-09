@@ -39,6 +39,12 @@ export type LeaderboardRow = {
   behaviourPassRate: number | null;
   compliancePassRate: number | null;
   judge: string;
+  /** Probes that ran more than one pass for this row; blank (null) on single-pass rows. */
+  repeatedItems: number | null;
+  /** Mean pass rate over the repeated probes, one value per pass, then averaged. */
+  passRateMean: number | null;
+  /** Highest minus lowest pass rate across the passes on the repeated probes. */
+  passRateSpread: number | null;
   /** Completion tokens for 1 pass. Null if the column is absent or blank. */
   avgReplyTokens: number | null;
   /** USD, normalized to 1 pass per item. See results/README.md "Phase 4" before quoting. */
@@ -128,6 +134,9 @@ function loadLeaderboard(): LeaderboardRow[] {
     behaviourPassRate: num(need(row, "behaviour_pass_rate", "leaderboard.csv")),
     compliancePassRate: num(need(row, "compliance_pass_rate", "leaderboard.csv")),
     judge: need(row, "judge", "leaderboard.csv"),
+    repeatedItems: num(optional(row, "repeated_items")),
+    passRateMean: num(optional(row, "pass_rate_mean")),
+    passRateSpread: num(optional(row, "pass_rate_spread")),
     avgReplyTokens: num(optional(row, "avg_reply_tokens")),
     estCostUsd1Pass: num(optional(row, "est_cost_usd_1pass")),
     avgTimeS1Pass: num(optional(row, "avg_time_s_1pass")),
@@ -176,8 +185,41 @@ export const HAS_RESULTS = LEADERBOARD.length > 0;
 /** True once at least one row carries a real cost figure — some rows are blank on purpose. */
 export const HAS_COST_DATA = LEADERBOARD.some((row) => row.estCostUsd1Pass !== null);
 
-/** The judge every leaderboard row was marked by, taken from the rows themselves. */
+/**
+ * The judge column of leaderboard.csv, verbatim. Since the 2026-09-07 run it
+ * names a panel, "A + B, tiebreak C"; before that it named one model.
+ */
 export const WINNING_JUDGE: string = LEADERBOARD[0]?.judge ?? "";
+
+export type JudgeSeat = { role: "judge" | "tiebreak"; model: string };
+
+/**
+ * The judge column split into seats. "A + B, tiebreak C" gives two judges and
+ * a tiebreak; a bare model id gives one judge. Each `model` keeps its
+ * inference-provider prefix (e.g. "ollama:deepseek-v4-pro").
+ */
+export function parseJudgePanel(column: string): JudgeSeat[] {
+  const trimmed = column.trim();
+  if (!trimmed) return [];
+  const m = /^(.*?)(?:,\s*tiebreak\s+(\S+))?$/i.exec(trimmed);
+  const judges = (m?.[1] ?? trimmed).split(/\s*\+\s*/).filter(Boolean);
+  const seats: JudgeSeat[] = judges.map((model) => ({ role: "judge", model }));
+  if (m?.[2]) seats.push({ role: "tiebreak", model: m[2] });
+  return seats;
+}
+
+export const JUDGE_PANEL: JudgeSeat[] = parseJudgePanel(WINNING_JUDGE);
+
+/** True when at least one row carries a repeat-pass spread. */
+export const HAS_REPEATS = LEADERBOARD.some((row) => row.passRateSpread !== null);
+
+/** Median highest-minus-lowest pass-rate spread over rows that have one, in percentage points. */
+export function medianSpreadPct(): number | null {
+  const spreads = LEADERBOARD.filter((r) => r.passRateSpread !== null).map((r) => (r.passRateSpread ?? 0) * 100).sort((a, b) => a - b);
+  if (spreads.length === 0) return null;
+  const mid = Math.floor(spreads.length / 2);
+  return spreads.length % 2 ? spreads[mid] : (spreads[mid - 1] + spreads[mid]) / 2;
+}
 
 /**
  * `model` × `category` -> failure rate, for the compare page. Keyed off
