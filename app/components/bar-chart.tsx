@@ -19,7 +19,7 @@ const TONE_VAR: Record<"fail" | "accent" | "pass", string> = {
 
 /**
  * A single horizontal-bar chart, one hue (dataviz mark spec): ≤24px thick,
- * 4px rounded data-end, grows from a single left baseline, direct end-label
+ * 4px rounded ends, grows from a single left baseline, direct end-label
  * — no legend box, because one series needs none. `emphasis` mutes every
  * non-emphasized bar to gray (the "one series is the point" pattern) instead
  * of adding a second hue.
@@ -51,7 +51,7 @@ export function BarChart({
             </span>
             <div className="relative h-4 flex-1 rounded-sm bg-surface-2">
               <div
-                className="h-full rounded-r-sm"
+                className="h-full rounded-sm"
                 style={{ width: `${width}%`, background: color, opacity: hasEmphasis && !d.emphasis ? 0.55 : 1 }}
               />
             </div>
