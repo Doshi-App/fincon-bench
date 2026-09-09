@@ -4,7 +4,9 @@
   asked, what it replied, and how the judge marked it. This is the wide record
   a person can read or re-grade.
 - `results/leaderboard.csv` — one row per model: pass rate over the probes the
-  judge actually decided, plus the per-axis split.
+  judge actually decided, plus the per-axis split, and the mean and spread of
+  the pass rate across repeat passes (`pass_rate_mean`, `pass_rate_spread`,
+  over `repeated_items`; see `pass_spread`).
 - `results/category_breakdown.csv` — one row per model per category (long
   format, so adding a category never means adding a column): the fail rate
   that category earned for that model. Backs the website's model-by-category
@@ -58,6 +60,7 @@ LEADERBOARD_FIELDS = [
     "rank", "ranked", "model", "provider", "self_graded", "items", "decided", "passes",
     "fails", "arguable", "ungraded", "errors", "pass_rate", "fail_rate",
     "coverage", "behaviour_pass_rate", "compliance_pass_rate",
+    "repeated_items", "pass_rate_mean", "pass_rate_spread",
     "avg_reply_tokens", "judge",
 ]
 
@@ -112,6 +115,38 @@ def _avg(values: list[float]) -> float | None:
     return round(sum(values) / len(values), 4) if values else None
 
 
+def pass_spread(records: list[dict]) -> dict:
+    """Mean and spread of the pass rate across repeat passes (issue #30).
+
+    `pass_rate` on the leaderboard is the rate of majority verdicts. This
+    looks one level down: for every pass index, the share of repeated items
+    whose pass at that index was `pass`, over the items that have repeats and
+    whose pass reached a verdict. `pass_rate_mean` averages those per-pass
+    rates, `pass_rate_spread` is the highest minus the lowest, and
+    `repeated_items` says how many items the numbers rest on. A model with no
+    repeated item (one pass everywhere) gets blanks, not zeros.
+    """
+    by_index: dict[int, list[int]] = defaultdict(list)
+    repeated = 0
+    for record in records:
+        runs = record.get("repeats") or []
+        if len(runs) < 2:
+            continue
+        repeated += 1
+        for run in runs:
+            verdict = run.get("final_verdict")
+            if verdict in ("pass", "fail", "arguable"):
+                by_index[run.get("run_index", 0)].append(1 if verdict == "pass" else 0)
+    rates = [sum(v) / len(v) for v in by_index.values() if v]
+    if not rates:
+        return {"repeated_items": 0, "pass_rate_mean": "", "pass_rate_spread": ""}
+    return {
+        "repeated_items": repeated,
+        "pass_rate_mean": round(sum(rates) / len(rates), 4),
+        "pass_rate_spread": round(max(rates) - min(rates), 4),
+    }
+
+
 def merge_cross_provider(board: list[dict]) -> list[dict]:
     """Fold each exact pair in `MERGE_GROUPS` into 1 row, averaged.
 
@@ -151,6 +186,9 @@ def merge_cross_provider(board: list[dict]) -> list[dict]:
             "behaviour_pass_rate": str(_avg(behaviour)) if behaviour else "",
             "compliance_pass_rate": str(_avg(compliance)) if compliance else "",
             "avg_reply_tokens": round(sum(tokens) / len(tokens)) if tokens else "",
+            "repeated_items": sum(int(r.get("repeated_items") or 0) for r in rows),
+            "pass_rate_mean": _avg([float(r["pass_rate_mean"]) for r in rows if r.get("pass_rate_mean") not in ("", None)]) or "",
+            "pass_rate_spread": max([float(r["pass_rate_spread"]) for r in rows if r.get("pass_rate_spread") not in ("", None)], default=""),
             "judge": rows[0]["judge"],
         })
     survivors = [row for row in board if f"{row['provider']}:{row['model']}" not in consumed]
@@ -214,6 +252,7 @@ def main() -> int:
 
     rows: list[dict] = []
     per_model: dict[str, list[dict]] = defaultdict(list)
+    records_by_model: dict[str, list[dict]] = defaultdict(list)
 
     for raw in args.transcript:
         path = Path(raw)
@@ -257,6 +296,7 @@ def main() -> int:
             }
             rows.append(row)
             per_model[assistant].append(row)
+            records_by_model[assistant].append(record)
 
     rows.sort(key=lambda r: (r["model"], r["item_id"]))
     out_path = Path(args.outputs)
@@ -298,6 +338,7 @@ def main() -> int:
             "behaviour_pass_rate": axis_rate("behaviour"),
             "compliance_pass_rate": axis_rate("compliance"),
             "avg_reply_tokens": round(sum(tokens) / len(tokens)) if tokens else "",
+            **pass_spread(records_by_model[assistant]),
             "judge": judge_label,
         })
 
