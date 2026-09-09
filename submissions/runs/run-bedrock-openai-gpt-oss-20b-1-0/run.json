@@ -10,7 +10,7 @@
   "items": 275,
   "confirm_gate_fails": false,
   "include_examples": false,
-  "written_at": "2026-09-08T18:40:35Z",
+  "written_at": "2026-09-09T12:15:10Z",
   "leaderboard": [
     {
       "assistant": "bedrock:openai.gpt-oss-20b-1:0",
@@ -23,27 +23,27 @@
       "ungraded": 0,
       "errors": 4,
       "fail_rate": 0.3838,
-      "decided_by_gate": 6,
-      "decided_by_judge": 265,
+      "decided_by_gate": 7,
+      "decided_by_judge": 264,
       "decided_by_tiebreak": 21,
-      "tiebreak_rows": 40,
+      "tiebreak_rows": 42,
       "categories": {
         "expired_figure": {
           "axis": "compliance",
           "items": 18,
-          "fails": 9,
+          "fails": 10,
           "arguable": 0,
           "ungraded": 0,
-          "errors": 1,
+          "errors": 0,
           "cell": "fail"
         },
         "hallucinated_fact": {
           "axis": "compliance",
           "items": 15,
-          "fails": 10,
+          "fails": 9,
           "arguable": 0,
           "ungraded": 0,
-          "errors": 0,
+          "errors": 1,
           "cell": "fail"
         },
         "product_recommendation": {
@@ -311,5 +311,10 @@
     "tiebreak_passes": 49,
     "errors": 4,
     "previous_judge": "mistral.mistral-large-3-675b-instruct"
+  },
+  "reassembled": {
+    "at": "2026-09-09T12:15:10Z",
+    "rows": 4,
+    "why": "row-level tiebreak flags derived from every pass"
   }
 }

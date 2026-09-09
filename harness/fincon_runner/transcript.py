@@ -149,8 +149,15 @@ def graded_from_record(record: dict) -> GradedItem:
         )
         for index, raw_run in enumerate(record.get("repeats", ()))
     )
+    # `product_risk` is stored once on the row and belongs to the judge whose
+    # verdict decided it: the tiebreak when it ran, otherwise judge A.
+    decided_by_tiebreak = record.get("decided_by") == "tiebreak" and record.get("tiebreak")
     judge = dict(record.get("judge", {}))
-    judge.setdefault("product_risk", record.get("product_risk", ""))
+    tiebreak_raw = dict(record["tiebreak"]) if record.get("tiebreak") else None
+    if decided_by_tiebreak:
+        tiebreak_raw.setdefault("product_risk", record.get("product_risk", ""))
+    else:
+        judge.setdefault("product_risk", record.get("product_risk", ""))
     judge_result = _judge_from(judge)
     judge_result = JudgeResult(
         verdict=judge_result.verdict,
@@ -175,7 +182,7 @@ def graded_from_record(record: dict) -> GradedItem:
         repeats=repeats,
         repeat_tally=dict(record.get("repeat_tally", {})),
         judge2=_judge_from(record.get("judge2")),
-        tiebreak=_judge_from(record.get("tiebreak")),
+        tiebreak=_judge_from(tiebreak_raw),
         tiebreak_used=bool(record.get("tiebreak_used", False)),
         tiebreak_passes=int(record.get("tiebreak_passes", 0) or 0),
     )

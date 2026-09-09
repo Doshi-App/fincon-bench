@@ -10,7 +10,7 @@
   "items": 275,
   "confirm_gate_fails": false,
   "include_examples": false,
-  "written_at": "2026-09-08T14:31:10Z",
+  "written_at": "2026-09-09T12:15:09Z",
   "leaderboard": [
     {
       "assistant": "bedrock:deepseek.v3.2",
@@ -289,5 +289,10 @@
     "tiebreak_passes": 32,
     "errors": 0,
     "previous_judge": "mistral.mistral-large-3-675b-instruct"
+  },
+  "reassembled": {
+    "at": "2026-09-09T12:15:09Z",
+    "rows": 1,
+    "why": "row-level tiebreak flags derived from every pass"
   }
 }

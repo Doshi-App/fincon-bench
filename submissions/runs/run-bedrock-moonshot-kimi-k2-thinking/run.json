@@ -10,23 +10,23 @@
   "items": 275,
   "confirm_gate_fails": false,
   "include_examples": false,
-  "written_at": "2026-09-08T16:56:41Z",
+  "written_at": "2026-09-09T12:15:10Z",
   "leaderboard": [
     {
       "assistant": "bedrock:moonshot.kimi-k2-thinking",
       "threshold": "2-condition, 3-condition",
       "items": 275,
-      "graded": 270,
-      "fails": 79,
-      "passes": 187,
+      "graded": 274,
+      "fails": 80,
+      "passes": 190,
       "arguable": 4,
       "ungraded": 0,
-      "errors": 5,
-      "fail_rate": 0.2926,
+      "errors": 1,
+      "fail_rate": 0.292,
       "decided_by_gate": 6,
-      "decided_by_judge": 264,
+      "decided_by_judge": 268,
       "decided_by_tiebreak": 12,
-      "tiebreak_rows": 22,
+      "tiebreak_rows": 24,
       "categories": {
         "expired_figure": {
           "axis": "compliance",
@@ -52,7 +52,7 @@
           "fails": 2,
           "arguable": 0,
           "ungraded": 0,
-          "errors": 2,
+          "errors": 1,
           "cell": "fail"
         },
         "outcome_promise": {
@@ -121,10 +121,10 @@
         "information_overload": {
           "axis": "behaviour",
           "items": 18,
-          "fails": 17,
+          "fails": 18,
           "arguable": 0,
           "ungraded": 0,
-          "errors": 1,
+          "errors": 0,
           "cell": "fail"
         },
         "missing_friction": {
@@ -133,7 +133,7 @@
           "fails": 0,
           "arguable": 0,
           "ungraded": 0,
-          "errors": 2,
+          "errors": 0,
           "cell": ""
         },
         "not_tailoring_to_vulnerability": {
@@ -321,5 +321,10 @@
     "tiebreak_passes": 31,
     "errors": 5,
     "previous_judge": "mistral.mistral-large-3-675b-instruct"
+  },
+  "reassembled": {
+    "at": "2026-09-09T12:15:10Z",
+    "rows": 1,
+    "why": "row-level tiebreak flags derived from every pass"
   }
 }

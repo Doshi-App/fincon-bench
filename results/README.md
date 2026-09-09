@@ -9,7 +9,7 @@ The four CSVs in this directory now describe this run. Everything from "Run of
   (judge A) and `ollama:glm-5.3-flash` (judge B). When they agree, that is the
   verdict. When they disagree, `anthropic:claude-opus-5` marks the reply and
   decides. The choice and its cost are in `docs/judge-selection-2026-09-07.md`.
-  1,953 of 36,533 passes (5.3 percent) needed the tiebreak. Two rows are
+  1,975 of 36,533 passes (5.4 percent) needed the tiebreak. Two rows are
   self-graded and flagged: `deepseek-v4-pro` (judge A) and `claude-opus-5`
   (the tiebreak).
 - **Probes.** 275 open probes, up from 191. The 84 added on 2026-09-01 (the
@@ -136,9 +136,9 @@ per-run audit records under `submissions/`.
 | File | What it holds |
 |---|---|
 | `judge_selection.csv` | Re-written 2026-09-07: 28 candidate judges scored against 424 labelled rows, plus 2 baselines, with bootstrap intervals. The 2026-08-13 table (17 judges, 100 rows) is in git history before commit `3041953`. |
-| `model_outputs.csv` | 10,887 rows — one per model per probe: the probe, the reply, and the judge's verdict with its reasoning. |
-| `leaderboard.csv` | 54 rows, ranked by failure rate over the probes the judge decided (lowest failure rate = rank 1). 3 rows each fold 2 provider runs of the same model into 1, averaged — see "Phase 2" below. 2 added columns, `est_cost_usd_1pass` and `avg_time_s_1pass`, are estimates — see "Phase 4" below before quoting either. |
-| `category_breakdown.csv` | 810 rows (54 models × 15 failure categories), long format: the failure rate 1 model earned on 1 category. Same 3-row merge as `leaderboard.csv`, same rule — averaged, not pooled. Backs the website's model-by-category matrix. |
+| `model_outputs.csv` | 16,225 rows — one per model per probe: the probe, the reply, judge A's verdict (`judge_verdict`), judge B's (`judge2_verdict`), the tiebreak's where it ran (`tiebreak_verdict`), the `tiebreak` flag, the published verdict with the deciding judge's reasoning, the pass count (`repeats`) and the contested passes (`tiebreak_passes`). Rewritten by the 2026-09-07 to 09 run. |
+| `leaderboard.csv` | 56 rows, 54 ranked by pass rate over the probes the judges decided. 3 rows each fold 2 provider runs of the same model into 1, averaged — see "Phase 2" below. Columns added by the 2026-09-07 to 09 run: `repeated_items`, `pass_rate_mean`, `pass_rate_spread`, and `judge` names all three seats. The "Phase 4" estimate columns `est_cost_usd_1pass` and `avg_time_s_1pass` are not carried for this run. |
+| `category_breakdown.csv` | 840 rows (56 models × 15 failure categories), long format: the failure rate 1 model earned on 1 category. Same 3-row merge as `leaderboard.csv`, same rule — averaged, not pooled. Backs the website's model-by-category matrix. |
 | `roster.json` | Every model the reachability probe tried, and why the 9 that failed did. |
 
 ### `leaderboard.csv` — the columns "Phase 4" adds, defined once

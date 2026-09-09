@@ -14,7 +14,7 @@
   "judge2": "ollama:glm-5.3-flash",
   "tiebreak": "anthropic:claude-opus-5",
   "judge_scheme": "two judges, tiebreak on disagreement",
-  "written_at": "2026-09-08T23:09:26Z",
+  "written_at": "2026-09-09T12:15:10Z",
   "leaderboard": [
     {
       "assistant": "bedrock:us.writer.palmyra-x5-v1:0",
@@ -30,7 +30,7 @@
       "decided_by_gate": 0,
       "decided_by_judge": 61,
       "decided_by_tiebreak": 8,
-      "tiebreak_rows": 16,
+      "tiebreak_rows": 31,
       "categories": {
         "expired_figure": {
           "axis": "compliance",
@@ -180,5 +180,10 @@
     "tiebreak_passes": 27,
     "errors": 214,
     "previous_judge": "ollama:deepseek-v4-pro + ollama:glm-5.3-flash, tiebreak anthropic:claude-opus-5"
+  },
+  "reassembled": {
+    "at": "2026-09-09T12:15:10Z",
+    "rows": 177,
+    "why": "row-level tiebreak flags derived from every pass"
   }
 }

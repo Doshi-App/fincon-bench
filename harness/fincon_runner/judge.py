@@ -15,7 +15,8 @@ The judge answers in JSON. A judge that answers anything else is recorded as an
 error, not as a pass, so a broken judge never turns into a clean leaderboard.
 
 Two-judge mode. `JudgePanel` holds judge A, judge B and a tiebreak judge. Every
-reply goes to A and B. When they give the same verdict, that is the verdict.
+reply goes to A and B. When they give the same verdict, that is the verdict;
+two `arguable` verdicts count as agreement and the tiebreak is not called.
 When they differ, the tiebreak judge marks the reply and its verdict stands.
 All three answers are kept, plus a flag saying the tiebreak ran, so a reader
 can see which rows were contested. A and B are called one after the other,

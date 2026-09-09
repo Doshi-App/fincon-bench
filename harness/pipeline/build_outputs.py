@@ -6,7 +6,8 @@
 - `results/leaderboard.csv` — one row per model: pass rate over the probes the
   judge actually decided, plus the per-axis split, and the mean and spread of
   the pass rate across repeat passes (`pass_rate_mean`, `pass_rate_spread`,
-  over `repeated_items`; see `pass_spread`).
+  over `repeated_items`; see `pass_spread`). Cross-provider merges sum
+  `repeated_items` and average the two rate columns.
 - `results/category_breakdown.csv` — one row per model per category (long
   format, so adding a category never means adding a column): the fail rate
   that category earned for that model. Backs the website's model-by-category
@@ -115,6 +116,10 @@ def _avg(values: list[float]) -> float | None:
     return round(sum(values) / len(values), 4) if values else None
 
 
+def _blank_if_none(value):
+    return "" if value is None else value
+
+
 def pass_spread(records: list[dict]) -> dict:
     """Mean and spread of the pass rate across repeat passes (issue #30).
 
@@ -139,7 +144,8 @@ def pass_spread(records: list[dict]) -> dict:
                 by_index[run.get("run_index", 0)].append(1 if verdict == "pass" else 0)
     rates = [sum(v) / len(v) for v in by_index.values() if v]
     if not rates:
-        return {"repeated_items": 0, "pass_rate_mean": "", "pass_rate_spread": ""}
+        # Repeated items whose passes all failed still count as repeated.
+        return {"repeated_items": repeated, "pass_rate_mean": "", "pass_rate_spread": ""}
     return {
         "repeated_items": repeated,
         "pass_rate_mean": round(sum(rates) / len(rates), 4),
@@ -187,8 +193,10 @@ def merge_cross_provider(board: list[dict]) -> list[dict]:
             "compliance_pass_rate": str(_avg(compliance)) if compliance else "",
             "avg_reply_tokens": round(sum(tokens) / len(tokens)) if tokens else "",
             "repeated_items": sum(int(r.get("repeated_items") or 0) for r in rows),
-            "pass_rate_mean": _avg([float(r["pass_rate_mean"]) for r in rows if r.get("pass_rate_mean") not in ("", None)]) or "",
-            "pass_rate_spread": max([float(r["pass_rate_spread"]) for r in rows if r.get("pass_rate_spread") not in ("", None)], default=""),
+            # Both rate columns average 50/50 like every other rate here; a
+            # true 0.0 stays 0.0 and only a missing value is blank.
+            "pass_rate_mean": _blank_if_none(_avg([float(r["pass_rate_mean"]) for r in rows if r.get("pass_rate_mean") not in ("", None)])),
+            "pass_rate_spread": _blank_if_none(_avg([float(r["pass_rate_spread"]) for r in rows if r.get("pass_rate_spread") not in ("", None)])),
             "judge": rows[0]["judge"],
         })
     survivors = [row for row in board if f"{row['provider']}:{row['model']}" not in consumed]
@@ -261,6 +269,10 @@ def main() -> int:
             provider, model = split_spec(assistant)
             item = record.get("item", {})
             judge = record.get("judge", {})
+            # A row was judged by the panel if the record carries the panel
+            # fields, even when the representative pass has no judge2 (an
+            # error row whose other passes were judged).
+            has_panel = "judge2" in record
             judge2 = record.get("judge2") or {}
             tiebreak = record.get("tiebreak") or {}
             tiebreak_used = bool(record.get("tiebreak_used", False))
@@ -283,7 +295,7 @@ def main() -> int:
                 "judge_verdict": judge.get("verdict", ""),
                 "judge2_verdict": judge2.get("verdict", ""),
                 "tiebreak_verdict": tiebreak.get("verdict", "") if tiebreak else "",
-                "tiebreak": ("yes" if tiebreak_used else "no") if judge2 else "",
+                "tiebreak": ("yes" if tiebreak_used else "no") if has_panel else "",
                 "final_verdict": record.get("final_verdict", ""),
                 "decided_by": record.get("decided_by", ""),
                 "product_risk": record.get("product_risk", ""),
@@ -292,7 +304,7 @@ def main() -> int:
                 "gate_verdict": gate.get("verdict", ""),
                 "reply_tokens": item.get("output_tokens") or "",
                 "repeats": len(record.get("repeats") or []) or 1,
-                "tiebreak_passes": record.get("tiebreak_passes", "") if judge2 else "",
+                "tiebreak_passes": record.get("tiebreak_passes", "") if has_panel else "",
             }
             rows.append(row)
             per_model[assistant].append(row)

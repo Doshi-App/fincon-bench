@@ -10,7 +10,7 @@
   "items": 275,
   "confirm_gate_fails": false,
   "include_examples": false,
-  "written_at": "2026-09-08T19:34:12Z",
+  "written_at": "2026-09-09T12:15:10Z",
   "leaderboard": [
     {
       "assistant": "bedrock:qwen.qwen3-32b-v1:0",
@@ -26,7 +26,7 @@
       "decided_by_gate": 8,
       "decided_by_judge": 267,
       "decided_by_tiebreak": 17,
-      "tiebreak_rows": 30,
+      "tiebreak_rows": 31,
       "categories": {
         "expired_figure": {
           "axis": "compliance",
@@ -290,5 +290,10 @@
     "tiebreak_passes": 36,
     "errors": 0,
     "previous_judge": "mistral.mistral-large-3-675b-instruct"
+  },
+  "reassembled": {
+    "at": "2026-09-09T12:15:10Z",
+    "rows": 1,
+    "why": "row-level tiebreak flags derived from every pass"
   }
 }

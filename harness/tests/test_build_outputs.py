@@ -24,6 +24,10 @@ class PassSpreadTest(unittest.TestCase):
         self.assertEqual(out["pass_rate_mean"], 0.5)
         self.assertEqual(out["pass_rate_spread"], 1.0)
 
+    def test_repeated_items_that_all_errored_are_still_counted(self):
+        out = build_outputs.pass_spread([record("error", "error"), record("error", "error")])
+        self.assertEqual(out, {"repeated_items": 2, "pass_rate_mean": "", "pass_rate_spread": ""})
+
     def test_single_pass_rows_are_blank_not_zero(self):
         out = build_outputs.pass_spread([{"final_verdict": "pass"}, {"repeats": [{"run_index": 0, "final_verdict": "pass"}]}])
         self.assertEqual(out, {"repeated_items": 0, "pass_rate_mean": "", "pass_rate_spread": ""})

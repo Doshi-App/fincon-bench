@@ -342,8 +342,14 @@ class GradedItem:
             record["product_risk"] = self.deciding_judge.product_risk
         if self.error:
             record["error"] = self.error
-        if self.judge2 is not None:
-            record["judge2"] = self.judge2.as_dict()
+        # The row was judged by a panel if any pass was, not only the
+        # representative: an error row's representative is a failed reply with
+        # no judges, while its other passes may have called the tiebreak.
+        panel = self.judge2 is not None or self.tiebreak_used or any(
+            run.judge2 is not None for run in self.repeats
+        )
+        if panel:
+            record["judge2"] = self.judge2.as_dict() if self.judge2 else None
             record["tiebreak"] = self.tiebreak.as_dict() if self.tiebreak else None
             record["tiebreak_used"] = self.tiebreak_used
             record["tiebreak_passes"] = self.tiebreak_passes
