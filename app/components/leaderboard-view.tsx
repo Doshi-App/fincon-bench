@@ -12,6 +12,7 @@ export function LeaderboardView({
   breakdown,
   rows,
   hasCostData,
+  hasRepeats = false,
 }: {
   models: MatrixModel[];
   categories: MatrixCategory[];
@@ -19,6 +20,7 @@ export function LeaderboardView({
   breakdown: MatrixBreakdownRow[];
   rows: LeaderboardRow[];
   hasCostData: boolean;
+  hasRepeats?: boolean;
 }) {
   const [view, setView] = useState<"matrix" | "ranked">("matrix");
 
@@ -40,7 +42,7 @@ export function LeaderboardView({
       {view === "matrix" ? (
         <HeatmapMatrix models={models} categories={categories} matrix={matrix} breakdown={breakdown} />
       ) : (
-        <RankedList rows={rows} hasCostData={hasCostData} />
+        <RankedList rows={rows} hasCostData={hasCostData} hasRepeats={hasRepeats} />
       )}
     </div>
   );

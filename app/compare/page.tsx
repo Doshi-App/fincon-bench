@@ -32,7 +32,7 @@ export default function ComparePage() {
         badly on 1 specific category.
       </p>
       <p className="mt-2 max-w-2xl text-xs text-muted">
-        Same caveats as the leaderboard: 1 judge, 1 run, no repeat for variance. A category with few
+        Same caveats as the leaderboard: 2 judges and a tiebreak, repeats on 84 of 275 probes only. A category with few
         decided probes is noisier than one with many — see{" "}
         <a href="/methodology" className="text-accent hover:underline">
           methodology

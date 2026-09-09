@@ -1,6 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
 import { LEADERBOARD, HAS_RESULTS, notableFindings } from "@/lib/results";
+
+const RANKED_COUNT = LEADERBOARD.filter((r) => r.ranked).length;
 import { getCategory } from "@/lib/categories";
 import { GithubCTA } from "./components/site-chrome";
 import { StatTile, KpiRow } from "./components/stat-tile";
@@ -82,13 +84,13 @@ export default function Home() {
       {HAS_RESULTS && (
         <section className="mx-auto max-w-4xl px-6 py-10">
           <h2 className="text-center text-2xl font-semibold tracking-tight">Lowest failure rates</h2>
-          <p className="mt-2 text-center text-muted">Failure rate. Lower is better. The 10 lowest of 54 models.</p>
+          <p className="mt-2 text-center text-muted">Failure rate. Lower is better. The 10 lowest of {RANKED_COUNT} ranked models.</p>
           <div className="mt-8 rounded-lg border border-border p-6">
             <BarChart data={homepageOverview()} tone="fail" max={100} formatValue={(v) => `${Math.round(v)}%`} />
           </div>
           <p className="mt-4 text-center text-sm">
             <Link href="/leaderboard" className="text-accent hover:underline">
-              See all 54 models, broken down by failure category →
+              See all {RANKED_COUNT} models, broken down by failure category →
             </Link>
           </p>
         </section>

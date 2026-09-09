@@ -63,7 +63,7 @@ export default async function ModelPage({ params }: PageProps<"/models/[id]">) {
       </div>
       <p className="mt-2 text-muted">
         via {d.host}
-        {row.selfGraded && " · this model is also the judge that graded this leaderboard"}
+        {row.selfGraded && " · this model also sits on the judge panel that graded this leaderboard"}
       </p>
       <p className="mt-1 font-mono text-xs text-muted" title="The raw model id, for cross-referencing the CSVs and transcripts.">
         {row.model}
@@ -72,7 +72,12 @@ export default async function ModelPage({ params }: PageProps<"/models/[id]">) {
       <div className="mt-8">
         <KpiRow>
           <StatTile label="Failure rate" value={pct(row.failRate)} note={`${row.fails} of ${row.decided} decided probes failed.`} />
-          <StatTile label="Coverage" value={pct(row.coverage)} note="Share of probes the judge actually decided." />
+          <StatTile label="Coverage" value={pct(row.coverage)} note="Share of probes the judges actually decided." />
+          <StatTile
+            label="Spread across passes"
+            value={row.passRateSpread === null ? "—" : `${(row.passRateSpread * 100).toFixed(1)} pts`}
+            note={row.repeatedItems ? `Highest minus lowest pass rate over ${row.repeatedItems} repeated probes.` : "Every probe ran once."}
+          />
           <StatTile label="Compliance / behaviour" value={`${pct(row.compliancePassRate)} / ${pct(row.behaviourPassRate)}`} />
           <StatTile
             label="Cost per pass"
